@@ -290,7 +290,50 @@ def register_all_ade20k(root):
             ignore_label=255,
         )
 
+# ==== Predefined splits for Watercolor (PASCAL VOC format) ===========
+def register_all_water(root):
+    # root = "manifold://mobile_vision_dataset/tree/yujheli/dataset"
+    SPLITS = [
+        ("Watercolor_train", "watercolor", "train"),
+        ("Watercolor_test", "watercolor", "test"),
+    ]
+    for name, dirname, split in SPLITS:
+        year = 2012
+        # register_pascal_voc(name, os.path.join(root, dirname), split, year, class_names=["person", "dog","bicycle", "bird", "car", "cat"])
+        register_pascal_voc(name, os.path.join(root, dirname), split, year)
+        MetadataCatalog.get(name).evaluator_type = "pascal_voc"
+        # MetadataCatalog.get(name).thing_classes = ["person", "dog","bike", "bird", "car", "cat"]
+        # MetadataCatalog.get(name).thing_classes = ["person", "dog","bicycle", "bird", "car", "cat"]
+        # MetadataCatalog.get(name).evaluator_type = "coco"
 
+
+# ==== Predefined splits for Clipart (PASCAL VOC format) ===========
+def register_all_clipart(root):
+    # root = "manifold://mobile_vision_dataset/tree/yujheli/dataset"
+    SPLITS = [
+        ("Clipart1k_train", "clipart", "train"),
+        ("Clipart1k_test", "clipart", "test"),
+    ]
+    for name, dirname, split in SPLITS:
+        year = 2012
+        register_pascal_voc(name, os.path.join(root, dirname), split, year)
+        MetadataCatalog.get(name).evaluator_type = "pascal_voc"
+        # MetadataCatalog.get(name).evaluator_type = "coco"
+
+def register_all_comic(root):
+    # root = "manifold://mobile_vision_dataset/tree/yujheli/dataset"
+    SPLITS = [
+        ("Comic_train", "comic", "train"),
+        ("Comic_test", "comic", "test"),
+    ]
+    for name, dirname, split in SPLITS:
+        year = 2012
+        # register_pascal_voc(name, os.path.join(root, dirname), split, year, class_names=["person", "dog","bicycle", "bird", "car", "cat"])
+        register_pascal_voc(name, os.path.join(root, dirname), split, year)
+        MetadataCatalog.get(name).evaluator_type = "pascal_voc"
+        # MetadataCatalog.get(name).thing_classes = ["person", "dog","bike", "bird", "car", "cat"]
+        # MetadataCatalog.get(name).thing_classes = ["person", "dog","bicycle", "bird", "car", "cat"]
+        # MetadataCatalog.get(name).evaluator_type = "coco"
 # True for open source;
 # Internally at fb, we register them elsewhere
 if __name__.endswith(".builtin"):
@@ -302,3 +345,6 @@ if __name__.endswith(".builtin"):
     register_all_cityscapes_panoptic(_root)
     register_all_pascal_voc(_root)
     register_all_ade20k(_root)
+    register_all_clipart(_root)
+    register_all_water(_root)
+    register_all_comic(_root)

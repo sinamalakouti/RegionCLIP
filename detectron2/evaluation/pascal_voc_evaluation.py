@@ -28,7 +28,7 @@ class PascalVOCDetectionEvaluator(DatasetEvaluator):
     official API.
     """
 
-    def __init__(self, dataset_name):
+    def __init__(self, dataset_name,target_classnames=None):
         """
         Args:
             dataset_name (str): name of the dataset, e.g., "voc_2007_test"
@@ -47,6 +47,10 @@ class PascalVOCDetectionEvaluator(DatasetEvaluator):
         self._is_2007 = meta.year == 2007
         self._cpu_device = torch.device("cpu")
         self._logger = logging.getLogger(__name__)
+        if target_classnames is None:
+            self.target_classnames = self._class_names
+        else:
+            self.target_classnames = target_classnames
 
     def reset(self):
         self._predictions = defaultdict(list)  # class name -> list of prediction strings
@@ -93,6 +97,8 @@ class PascalVOCDetectionEvaluator(DatasetEvaluator):
 
             aps = defaultdict(list)  # iou -> ap per class
             for cls_id, cls_name in enumerate(self._class_names):
+                if cls_name not in self.target_classnames:
+                    continue
                 lines = predictions.get(cls_id, [""])
 
                 with open(res_file_template.format(cls_name), "w") as f:
@@ -111,7 +117,14 @@ class PascalVOCDetectionEvaluator(DatasetEvaluator):
 
         ret = OrderedDict()
         mAP = {iou: np.mean(x) for iou, x in aps.items()}
+        print('results')
+        print(mAP)
         ret["bbox"] = {"AP": np.mean(list(mAP.values())), "AP50": mAP[50], "AP75": mAP[75]}
+        
+        for idx, name in enumerate(self.target_classnames):
+                        ret["bbox"].update({"AP50-" + name: aps[50][idx]})
+        
+        print(ret['bbox'])
         return ret
 
 

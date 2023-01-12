@@ -256,6 +256,6 @@ def _soft_nms(
 
         boxes = boxes[keep]
         scores = scores[keep]
-        idxs = idxs[keep]
+        idxs = idxs[keep.to(idxs.device)]
 
     return torch.tensor(idxs_out).to(boxes.device), torch.tensor(scores_out).to(scores.device)
