@@ -3,13 +3,18 @@ output
 instant_test_output
 inference_test_output
 oai_clip_weights
+output/
+otput/*
+datasets/
+datasets/*
 
 pt_output
 pretrained_ckpt
 datasets/coco
 datasets/lvis
 datasets/cifar-10-batches-py
-
+pretrained_ckpt/
+pretrained_ckpt/*
 *.png
 *.json
 !vscode_launch.json
