@@ -253,6 +253,12 @@ class SimpleTrainer(TrainerBase):
         model.train()
 
         self.model = model
+
+        self.clipcap_model = ClipCaptionModel(40, 40)
+        p = torch.load('/Users/sinamalakouti/Desktop/test-regionclip/transformer_weights.pt', 'cpu')
+        self.clipcap_model.load_state_dict(p)
+        self.clipcap_model.eval()
+
         self.data_loader = data_loader
         self._data_loader_iter = iter(data_loader)
         self.optimizer = optimizer
@@ -275,7 +281,7 @@ class SimpleTrainer(TrainerBase):
 
         loss_dict = self.model(data)
 
-        caption_consistency_loss = self.model(data, branch='caption_consistency')
+        caption_consistency_loss = self.model(data, clipcap_model = self.clipcap_model, branch='caption_consistency')
 
         loss_dict.update(caption_consistency_loss)
 

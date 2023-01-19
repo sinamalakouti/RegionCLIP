@@ -19,7 +19,7 @@ from ..postprocessing import detector_postprocess
 from ..proposal_generator import build_proposal_generator
 from ..roi_heads import build_roi_heads
 from .build import META_ARCH_REGISTRY
-from ..backbone.clipcap.clipcap import ClipCaptionModel, unsupervised_loss
+from ..backbone.clipcap.clipcap import  unsupervised_loss
 __all__ = ["GeneralizedRCNN", "ProposalNetwork"]
 from torchvision.transforms import Resize
 @META_ARCH_REGISTRY.register()
@@ -78,9 +78,9 @@ class GeneralizedRCNN(nn.Module):
         self.use_clip_c4 = use_clip_c4 # if True, use C4 mode where roi_head uses the last resnet layer from backbone 
         self.use_clip_attpool = use_clip_attpool # if True (C4+text_emb_as_classifier), use att_pool to replace default mean pool
 
-        self.clipcap_model = ClipCaptionModel(40, 40)
-        p = torch.load('/Users/sinamalakouti/Desktop/test-regionclip/transformer_weights.pt', 'cpu')
-        self.clipcap_model.load_state_dict(p)
+        # self.clipcap_model = ClipCaptionModel(40, 40)
+        # p = torch.load('/Users/sinamalakouti/Desktop/test-regionclip/transformer_weights.pt', 'cpu')
+        # self.clipcap_model.load_state_dict(p)
 
     @classmethod
     def from_config(cls, cfg):
@@ -153,7 +153,7 @@ class GeneralizedRCNN(nn.Module):
         images_t = resizer(images_t.tensor)
         return images, images_t
 
-    def forward(self, batched_inputs: List[Dict[str, torch.Tensor]], branch='supervised'):
+    def forward(self, batched_inputs: List[Dict[str, torch.Tensor]], clipcap_model=None, branch='supervised'):
         """
         Args:
             batched_inputs: a list, batched outputs of :class:`DatasetMapper` .
@@ -183,8 +183,8 @@ class GeneralizedRCNN(nn.Module):
             images_src, images_target = self.preprocess_image_train(batched_inputs)
             prefix_src = self.backbone.attnpool(self.backbone(images_src)['res5'])
             prefix_trgt = self.backbone.attnpool(self.backbone(images_target)['res5'])
-            loss, captions = unsupervised_loss(prefix_src, prefix_trgt, self.clipcap_model, 40)
-            return {"cap_cons_loss" : loss}
+            loss, captions = unsupervised_loss(prefix_src, prefix_trgt, clipcap_model.to(self.device), 40)
+            return {"cap_cons_loss": loss}
 
 
         images = self.preprocess_image(batched_inputs)
