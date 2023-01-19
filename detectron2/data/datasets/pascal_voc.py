@@ -33,7 +33,7 @@ def load_voc_instances(dirname: str, split: str, class_names: Union[List[str], T
     """
     with PathManager.open(os.path.join(dirname, "ImageSets", "Main", split + ".txt")) as f:
         fileids = np.loadtxt(f, dtype=np.str)
-    is_training = (split == 'train') or (split == 'trainval') or 'trainval'
+    is_training = (split == 'train') or (split == 'trainval') 
     if is_training:
         dr_name_clipart_dt = os.path.join(dirname, '../dt_clipart')
     # Needs to read many small annotation files. Makes sense at local

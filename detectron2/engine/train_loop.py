@@ -306,7 +306,9 @@ class SimpleTrainer(TrainerBase):
         """
         self.optimizer.zero_grad()
         losses.backward()
-
+        report_loss = {}
+        for k in loss_dict.keys():
+            report_loss[k] = loss_dict[k].detach()
         self._write_metrics(loss_dict, data_time)
 
         """
