@@ -281,10 +281,9 @@ class SimpleTrainer(TrainerBase):
         """
 
         loss_dict = self.model(data)
-
-        caption_consistency_loss = self.model(data, clipcap_model = self.clipcap_model, branch='caption_consistency')
-
-        loss_dict.update(caption_consistency_loss)
+        if self.iter > 5000:
+            caption_consistency_loss = self.model(data, clipcap_model = self.clipcap_model, branch='caption_consistency')
+            loss_dict.update(caption_consistency_loss)
 
         if isinstance(loss_dict, torch.Tensor):
             losses = loss_dict
