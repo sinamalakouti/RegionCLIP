@@ -182,11 +182,13 @@ class GeneralizedRCNN(nn.Module):
         if branch == 'caption_consistency':
 
             images_src, images_target = self.preprocess_image_train(batched_inputs)
-            del images_src
-            del images_src
-            del batched_inputs
+            
             prefix_src = self.backbone.attnpool(self.backbone(images_src)['res5'])
             prefix_trgt = self.backbone.attnpool(self.backbone(images_target)['res5'])
+
+            del images_src
+            del images_target
+            del batched_inputs
             loss, captions = unsupervised_loss(prefix_src, prefix_trgt, clipcap_model.to(self.device), 40)
             return loss
 
