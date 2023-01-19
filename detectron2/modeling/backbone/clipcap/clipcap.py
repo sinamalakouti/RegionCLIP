@@ -339,9 +339,9 @@ def unsupervised_loss(prefix_teacher, prefix_student, model: ClipCaptionModel, p
         tokens = None
         for i in range(entry_length):
             # print(i)
-            with torch.no_grad():
-                outputs_teacher= model.gpt(inputs_embeds=generated_teacher)
-                outputs_student = model.gpt(inputs_embeds=generated_student)
+
+            outputs_teacher= model.gpt(inputs_embeds=generated_teacher)
+            outputs_student = model.gpt(inputs_embeds=generated_student)
             logits_teacher= outputs_teacher.logits
             logits_student = outputs_student.logits
 
