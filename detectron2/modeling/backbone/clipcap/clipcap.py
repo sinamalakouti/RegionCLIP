@@ -339,7 +339,7 @@ def unsupervised_loss(prefix_teacher, prefix_student, model: ClipCaptionModel, p
         entry_loss = []
         tokens = None
         for i in range(entry_length):
-            print(i)
+            # print(i)
             outputs_teacher= model.gpt(inputs_embeds=generated_teacher)
             outputs_student = model.gpt(inputs_embeds=generated_student)
             logits_teacher= outputs_teacher.logits
@@ -347,11 +347,11 @@ def unsupervised_loss(prefix_teacher, prefix_student, model: ClipCaptionModel, p
 
             logits_teacher = logits_teacher[:, -1, :] / (temperature if temperature > 0 else 1.0)
             logits_student = logits_student[:, -1, :] / (temperature if temperature > 0 else 1.0)
-            print(logits_student == logits_teacher)
+            # print(logits_student == logits_teacher)
 
             loss = torch.nn.functional.kl_div(torch.nn.functional.log_softmax(logits_student,dim=-1), torch.nn.functional.log_softmax(logits_teacher,dim=-1), reduction='batchmean',log_target=True)
             # loss = torch.nn.functional.cross_entropy(logits_student, torch.softmax(logits_teacher,1).detach())
-            print(loss)
+            # print(loss)
             entry_loss.append(loss)
 
 
