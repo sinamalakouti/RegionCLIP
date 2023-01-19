@@ -275,6 +275,8 @@ class SimpleTrainer(TrainerBase):
         """
         If you want to do something with the data, you can wrap the dataloader.
         """
+        self.model.zero_grad()
+        self.clipcap_model.zero_grad()
         data = next(self._data_loader_iter)
         data_time = time.perf_counter() - start
 
