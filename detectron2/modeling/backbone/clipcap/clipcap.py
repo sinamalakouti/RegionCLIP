@@ -315,10 +315,10 @@ def train(GT, prefix, model: ClipCaptionModel, args,
 
 def unsupervised_loss(prefix_teacher, prefix_student, model: ClipCaptionModel, prefix_length=10):
     gpt_embedding_size = model.gpt.transformer.wte.weight.shape[1]
+    with torch.no_grad():
+        embed_teacher = model.clip_project(prefix_teacher).view(-1, prefix_length, gpt_embedding_size)
 
-    embed_teacher = model.clip_project(prefix_teacher).view(-1, prefix_length, gpt_embedding_size)
-
-    embed_student = model.clip_project(prefix_student).view(-1, prefix_length, gpt_embedding_size)
+        embed_student = model.clip_project(prefix_student).view(-1, prefix_length, gpt_embedding_size)
 
     filter_value = -float("Inf")
     model.eval()
@@ -339,8 +339,9 @@ def unsupervised_loss(prefix_teacher, prefix_student, model: ClipCaptionModel, p
         tokens = None
         for i in range(entry_length):
             # print(i)
-            outputs_teacher= model.gpt(inputs_embeds=generated_teacher)
-            outputs_student = model.gpt(inputs_embeds=generated_student)
+            with torch.no_grad():
+                outputs_teacher= model.gpt(inputs_embeds=generated_teacher)
+                outputs_student = model.gpt(inputs_embeds=generated_student)
             logits_teacher= outputs_teacher.logits
             logits_student = outputs_student.logits
 
