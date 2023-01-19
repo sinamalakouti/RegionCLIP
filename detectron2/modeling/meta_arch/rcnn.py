@@ -19,9 +19,9 @@ from ..postprocessing import detector_postprocess
 from ..proposal_generator import build_proposal_generator
 from ..roi_heads import build_roi_heads
 from .build import META_ARCH_REGISTRY
-
+from ..backbone.clipcap.clipcap import ClipCaptionModel, unsupervised_loss
 __all__ = ["GeneralizedRCNN", "ProposalNetwork"]
-
+from torchvision.transforms import Resize
 @META_ARCH_REGISTRY.register()
 class GeneralizedRCNN(nn.Module):
     """
@@ -78,6 +78,10 @@ class GeneralizedRCNN(nn.Module):
         self.use_clip_c4 = use_clip_c4 # if True, use C4 mode where roi_head uses the last resnet layer from backbone 
         self.use_clip_attpool = use_clip_attpool # if True (C4+text_emb_as_classifier), use att_pool to replace default mean pool
 
+        self.clipcap_model = ClipCaptionModel(40, 40)
+        p = torch.load('/Users/sinamalakouti/Desktop/test-regionclip/transformer_weights.pt', 'cpu')
+        self.clipcap_model.load_state_dict(p)
+
     @classmethod
     def from_config(cls, cfg):
         backbone = build_backbone(cfg)
@@ -132,7 +136,24 @@ class GeneralizedRCNN(nn.Module):
             storage.put_image(vis_name, vis_img)
             break  # only visualize one image in a batch
 
-    def forward(self, batched_inputs: List[Dict[str, torch.Tensor]]):
+    def preprocess_image_train(self, batched_inputs: List[Dict[str, torch.Tensor]]):
+        """
+        Normalize, pad and batch the input images.
+        """
+        images = [x["image"].to(self.device) for x in batched_inputs]
+        images = [(x - self.pixel_mean) / self.pixel_std for x in images]
+        images = ImageList.from_tensors(images, self.backbone.size_divisibility)
+
+        images_t = [x["image_trgt"].to(self.device) for x in batched_inputs]
+        images_t = [(x - self.pixel_mean) / self.pixel_std for x in images_t]
+        images_t = ImageList.from_tensors(images_t, self.backbone.size_divisibility)
+
+        resizer = Resize((288,288))
+        images  = resizer(images.tensor)
+        images_t = resizer(images_t.tensor)
+        return images, images_t
+
+    def forward(self, batched_inputs: List[Dict[str, torch.Tensor]], branch='supervised'):
         """
         Args:
             batched_inputs: a list, batched outputs of :class:`DatasetMapper` .
@@ -157,6 +178,14 @@ class GeneralizedRCNN(nn.Module):
         """
         if not self.training:
             return self.inference(batched_inputs)
+        if branch == 'caption_consistency':
+
+            images_src, images_target = self.preprocess_image_train(batched_inputs)
+            prefix_src = self.backbone.attnpool(self.backbone(images_src)['res5'])
+            prefix_trgt = self.backbone.attnpool(self.backbone(images_target)['res5'])
+            loss, captions = unsupervised_loss(prefix_src, prefix_trgt, self.clipcap_model, 40)
+            return {"cap_cons_loss" : loss}
+
 
         images = self.preprocess_image(batched_inputs)
         if "instances" in batched_inputs[0]:
@@ -172,7 +201,7 @@ class GeneralizedRCNN(nn.Module):
             assert "proposals" in batched_inputs[0]
             proposals = [x["proposals"].to(self.device) for x in batched_inputs]
             proposal_losses = {}
-        
+
         if self.use_clip_c4: # use C4 + resnet weights from CLIP
             if self.use_clip_attpool: # use att_pool from CLIP to match dimension
                 _, detector_losses = self.roi_heads(images, features, proposals, gt_instances, res5=self.backbone.layer4, attnpool=self.backbone.attnpool)

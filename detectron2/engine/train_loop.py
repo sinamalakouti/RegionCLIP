@@ -13,6 +13,8 @@ import detectron2.utils.comm as comm
 from detectron2.utils.events import EventStorage, get_event_storage
 from detectron2.utils.logger import _log_api_usage
 
+from detectron2.modeling.backbone.clipcap.clipcap import ClipCaptionModel, unsupervised_loss
+
 __all__ = ["HookBase", "TrainerBase", "SimpleTrainer", "AMPTrainer"]
 
 
@@ -270,7 +272,13 @@ class SimpleTrainer(TrainerBase):
         """
         If you want to do something with the losses, you can wrap the model.
         """
+
         loss_dict = self.model(data)
+
+        caption_consistency_loss = self.model(data, branch='caption_consistency')
+
+        loss_dict.update(caption_consistency_loss)
+
         if isinstance(loss_dict, torch.Tensor):
             losses = loss_dict
             loss_dict = {"total_loss": loss_dict}
@@ -294,10 +302,10 @@ class SimpleTrainer(TrainerBase):
         self.optimizer.step()
 
     def _write_metrics(
-        self,
-        loss_dict: Dict[str, torch.Tensor],
-        data_time: float,
-        prefix: str = "",
+            self,
+            loss_dict: Dict[str, torch.Tensor],
+            data_time: float,
+            prefix: str = "",
     ):
         """
         Args:
