@@ -281,7 +281,7 @@ class SimpleTrainer(TrainerBase):
         """
 
         loss_dict = self.model(data)
-        if self.iter > 5000:
+        if self.iter > 50:
             caption_consistency_loss = self.model(data, clipcap_model = self.clipcap_model, branch='caption_consistency')
             loss_dict['caption_consistency'] = caption_consistency_loss
         else:
