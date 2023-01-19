@@ -320,7 +320,9 @@ def unsupervised_loss(prefix_teacher, prefix_student, model: ClipCaptionModel, p
     embed_teacher = model.clip_project(prefix_teacher).view(-1, prefix_length, gpt_embedding_size)
 
     embed_student = model.clip_project(prefix_student).view(-1, prefix_length, gpt_embedding_size)
-
+    model.cpu()
+    prefix_student.cpu()
+    prefix_teacher.cpu()
     filter_value = -float("Inf")
     model.eval()
     entry_length = 67
