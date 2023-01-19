@@ -128,14 +128,14 @@ class CLIPRes5ROIHeads(ROIHeads):
         box_features = self._shared_roi_transform(
             [features[f] for f in self.in_features], proposal_boxes, res5
         )
-        print("jizgoool"*20)
-        print(attnpool)
-        print(box_features.shape)
+        # print("jizgoool"*20)
+        # print(attnpool)
+        # print(box_features.shape)
         if attnpool:  # att pooling
             att_feats = attnpool(box_features)
-            print("attenpol"*100)
-            print(box_features.shape)
-            print(att_feats.shape)
+            # print("attenpol"*100)
+            # print(box_features.shape)
+            # print(att_feats.shape)
             predictions = self.box_predictor(att_feats)
         else: # mean pooling
             predictions = self.box_predictor(box_features.mean(dim=[2, 3]))
