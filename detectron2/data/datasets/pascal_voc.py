@@ -34,14 +34,18 @@ def load_voc_instances(dirname: str, split: str, class_names: Union[List[str], T
     with PathManager.open(os.path.join(dirname, "ImageSets", "Main", split + ".txt")) as f:
         fileids = np.loadtxt(f, dtype=np.str)
 
-    dr_name_clipart_dt = os.path.join(dirname, '../dt_clipart/VOC2007')
+    dr_name_clipart_dt = os.path.join(dirname, '../dt_clipart')
     # Needs to read many small annotation files. Makes sense at local
     annotation_dirname = PathManager.get_local_path(os.path.join(dirname, "Annotations/"))
     dicts = []
     for fileid in fileids:
         anno_file = os.path.join(annotation_dirname, fileid + ".xml")
         jpeg_file = os.path.join(dirname, "JPEGImages", fileid + ".jpg")
-        clipart_dt_file =  os.path.join(dr_name_clipart_dt, "JPEGImages", fileid + ".jpg")
+        if "VOC2007" in jpeg_file:
+            voc_dir = "VOC2007"
+        else:
+            voc_dir = "VOC2012"
+        clipart_dt_file =  os.path.join(dr_name_clipart_dt, voc_dir, "JPEGImages", fileid + ".jpg")
         with PathManager.open(anno_file) as f:
             tree = ET.parse(f)
 
