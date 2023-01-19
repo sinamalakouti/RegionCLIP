@@ -314,15 +314,15 @@ def train(GT, prefix, model: ClipCaptionModel, args,
 
 
 def unsupervised_loss(prefix_teacher, prefix_student, model: ClipCaptionModel, prefix_length=10):
-
+    model = model.cpu()
+    prefix_teacher.cpu()
+    prefix_student.cpu()
     gpt_embedding_size = model.gpt.transformer.wte.weight.shape[1]
 
     embed_teacher = model.clip_project(prefix_teacher).view(-1, prefix_length, gpt_embedding_size)
 
     embed_student = model.clip_project(prefix_student).view(-1, prefix_length, gpt_embedding_size)
-    model = model.cpu()
-    embed_student.cpu()
-    embed_teacher.cpu()
+
     filter_value = -float("Inf")
     model.eval()
     entry_length = 67
