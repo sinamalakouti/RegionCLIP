@@ -340,9 +340,9 @@ def unsupervised_loss(prefix_teacher, prefix_student, model: ClipCaptionModel, p
         for i in range(entry_length):
             # print(i)
 
-            outputs_teacher= model.gpt(inputs_embeds=generated_teacher).detach()
+            outputs_teacher= model.gpt(inputs_embeds=generated_teacher)
             outputs_student = model.gpt(inputs_embeds=generated_student)
-            logits_teacher= outputs_teacher.logits
+            logits_teacher= outputs_teacher.logits.detach()
             logits_student = outputs_student.logits
 
             logits_teacher = logits_teacher[:, -1, :] / (temperature if temperature > 0 else 1.0)
