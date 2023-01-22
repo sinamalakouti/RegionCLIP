@@ -182,7 +182,7 @@ class GeneralizedRCNN(nn.Module):
         if branch == 'caption_consistency':
 
             images_src, images_target = self.preprocess_image_train(batched_inputs)
-            
+
             prefix_src = self.backbone.attnpool(self.backbone(images_src)['res5'])
             prefix_trgt = self.backbone.attnpool(self.backbone(images_target)['res5'])
 

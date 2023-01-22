@@ -367,10 +367,10 @@ def unsupervised_loss(prefix_teacher, prefix_student, model: ClipCaptionModel, p
             logits_teacher[:, indices_to_remove] = filter_value
             next_token_teacher = torch.argmax(logits_teacher, -1).unsqueeze(0)
             next_token_embed_teacher = model.gpt.transformer.wte(next_token_teacher)
-            if tokens is None:
-                tokens = next_token_teacher
-            else:
-                tokens = torch.cat((tokens, next_token_teacher), dim=1)
+            # if tokens is None:
+            #     tokens = next_token_teacher
+            # else:
+            #     tokens = torch.cat((tokens, next_token_teacher), dim=1)
             generated_teacher = torch.cat((generated_teacher, next_token_embed_teacher), dim=1)
 
 #student
@@ -391,10 +391,10 @@ def unsupervised_loss(prefix_teacher, prefix_student, model: ClipCaptionModel, p
             if stop_token_index == next_token_teacher.item():
                 break
         losses.append(sum(entry_loss) / len(entry_loss))
-        output_list = list(tokens.squeeze().cpu().numpy())
-        output_text = model.tokenizer.decode(output_list)
-        generated_list.append(output_text)
-    return sum(losses)/len(losses), generated_list
+        # output_list = list(tokens.squeeze().cpu().numpy())
+        # output_text = model.tokenizer.decode(output_list)
+        # generated_list.append(output_text)
+    return sum(losses)/len(losses) #, generated_list
 
 
 
@@ -447,10 +447,10 @@ def generate2(
                 logits[:, indices_to_remove] = filter_value
                 next_token = torch.argmax(logits, -1).unsqueeze(0)
                 next_token_embed = model.gpt.transformer.wte(next_token)
-                if tokens is None:
-                    tokens = next_token
-                else:
-                    tokens = torch.cat((tokens, next_token), dim=1)
+                # if tokens is None:
+                #     tokens = next_token
+                # else:
+                #     tokens = torch.cat((tokens, next_token), dim=1)
                 generated = torch.cat((generated, next_token_embed), dim=1)
                 if stop_token_index == next_token.item():
                     break
