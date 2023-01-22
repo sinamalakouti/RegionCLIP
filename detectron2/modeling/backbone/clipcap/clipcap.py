@@ -371,25 +371,25 @@ def unsupervised_loss(prefix_teacher, prefix_student, model: ClipCaptionModel, p
             #     tokens = next_token_teacher
             # else:
             #     tokens = torch.cat((tokens, next_token_teacher), dim=1)
-            generated_teacher = torch.cat((generated_teacher, next_token_embed_teacher), dim=1)
+                generated_teacher = torch.cat((generated_teacher, next_token_embed_teacher), dim=1)
 
 #student
-            sorted_logits, sorted_indices = torch.sort(logits_student, descending=True)
-            cumulative_probs = torch.cumsum(nnf.softmax(sorted_logits, dim=-1), dim=-1)
-            sorted_indices_to_remove = cumulative_probs > top_p
-            sorted_indices_to_remove[..., 1:] = sorted_indices_to_remove[
-                                                ..., :-1
-                                                ].clone()
-            sorted_indices_to_remove[..., 0] = 0
+                sorted_logits, sorted_indices = torch.sort(logits_student, descending=True)
+                cumulative_probs = torch.cumsum(nnf.softmax(sorted_logits, dim=-1), dim=-1)
+                sorted_indices_to_remove = cumulative_probs > top_p
+                sorted_indices_to_remove[..., 1:] = sorted_indices_to_remove[
+                                                    ..., :-1
+                                                    ].clone()
+                sorted_indices_to_remove[..., 0] = 0
 
-            indices_to_remove = sorted_indices[sorted_indices_to_remove]
-            logits_student[:, indices_to_remove] = filter_value
-            next_token_student = torch.argmax(logits_student, -1).unsqueeze(0)
-            next_token_embed_student = model.gpt.transformer.wte(next_token_student)
+                indices_to_remove = sorted_indices[sorted_indices_to_remove]
+                logits_student[:, indices_to_remove] = filter_value
+                next_token_student = torch.argmax(logits_student, -1).unsqueeze(0)
+                next_token_embed_student = model.gpt.transformer.wte(next_token_student)
 
-            generated_student = torch.cat((generated_student, next_token_embed_student), dim=1)
-            if stop_token_index == next_token_teacher.item():
-                break
+                generated_student = torch.cat((generated_student, next_token_embed_student), dim=1)
+                if stop_token_index == next_token_teacher.item():
+                    break
         losses.append(sum(entry_loss) / len(entry_loss))
         # output_list = list(tokens.squeeze().cpu().numpy())
         # output_text = model.tokenizer.decode(output_list)

@@ -136,9 +136,12 @@ class DatasetMapper:
         #print(dataset_dict["file_name"])
         #print(dataset_dict["clipart_dt_file_name"])
         image = utils.read_image(dataset_dict["file_name"], format=self.image_format)
-        image_trgt = utils.read_image(dataset_dict["clipart_dt_file_name"], format=self.image_format)
         utils.check_image_size(dataset_dict, image)
-        utils.check_image_size(dataset_dict, image_trgt)
+        if "clipart_dt_file_name" in dataset_dict:
+            image_trgt = utils.read_image(dataset_dict["clipart_dt_file_name"], format=self.image_format)
+            utils.check_image_size(dataset_dict, image_trgt)
+        else:
+            image_trgt = None
 
         # USER: Remove if you don't do semantic/panoptic segmentation.
         if "sem_seg_file_name" in dataset_dict:
@@ -151,16 +154,17 @@ class DatasetMapper:
         transforms = self.augmentations(aug_input)
         image, sem_seg_gt = aug_input.image, aug_input.sem_seg
 
-        aug_input_trgt = T.AugInput(image_trgt, sem_seg=sem_seg_gt)
-
-        image_trgt =  transforms.apply_image(image_trgt)
+        if image_trgt:
+            aug_input_trgt = T.AugInput(image_trgt, sem_seg=sem_seg_gt)
+            image_trgt =  transforms.apply_image(image_trgt)
 
         image_shape = image.shape[:2]  # h, w
         # Pytorch's dataloader is efficient on torch.Tensor due to shared-memory,
         # but not efficient on large generic data structures due to the use of pickle & mp.Queue.
         # Therefore it's important to use torch.Tensor.
         dataset_dict["image"] = torch.as_tensor(np.ascontiguousarray(image.transpose(2, 0, 1)))
-        dataset_dict["image_trgt"] = torch.as_tensor(np.ascontiguousarray(image_trgt.transpose(2, 0, 1)))
+        if image_trgt:
+            dataset_dict["image_trgt"] = torch.as_tensor(np.ascontiguousarray(image_trgt.transpose(2, 0, 1)))
         if sem_seg_gt is not None:
             dataset_dict["sem_seg"] = torch.as_tensor(sem_seg_gt.astype("long"))
 
