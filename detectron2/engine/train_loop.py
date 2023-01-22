@@ -254,13 +254,13 @@ class SimpleTrainer(TrainerBase):
 
         self.model = model
 
-        # self.clipcap_model = ClipCaptionModel(40, 40)
+        self.clipcap_model = ClipCaptionModel(40, 40)
         #p = torch.load('/Users/sinamalakouti/Desktop/test-regionclip/transformer_weights.pt', 'cpu')
         p = torch.load('/projects/sina/RegionCLIP/pretrained_ckpt/transformer_weights.pt','cpu')
-        # self.clipcap_model.load_state_dict(p)
-        # self.clipcap_model.eval()
-        # for p in self.clipcap_model.parameters():
-        #     p.requires_grad = False
+        self.clipcap_model.load_state_dict(p)
+        self.clipcap_model.eval()
+        for p in self.clipcap_model.parameters():
+            p.requires_grad = False
 
         self.data_loader = data_loader
         self._data_loader_iter = iter(data_loader)
@@ -276,7 +276,7 @@ class SimpleTrainer(TrainerBase):
         If you want to do something with the data, you can wrap the dataloader.
         """
         self.model.zero_grad()
-        # self.clipcap_model.zero_grad()
+        self.clipcap_model.zero_grad()
         data = next(self._data_loader_iter)
         data_time = time.perf_counter() - start
 
@@ -286,20 +286,14 @@ class SimpleTrainer(TrainerBase):
 
         loss_dict = self.model(data)
         loss = {}
-        if self.iter > 50:
-            clipcap_model = ClipCaptionModel(40, 40)
-            # p = torch.load('/Users/sinamalakouti/Desktop/test-regionclip/transformer_weights.pt', 'cpu')
-            p = torch.load('/projects/sina/RegionCLIP/pretrained_ckpt/transformer_weights.pt', 'cpu')
-            clipcap_model.load_state_dict(p)
-            clipcap_model.eval()
-            for p in clipcap_model.parameters():
-                p.requires_grad = False
-            caption_consistency_loss = self.model(data, clipcap_model =clipcap_model, branch='caption_consistency')
-            loss['caption_consistency_loss'] = caption_consistency_loss
+        # if self.iter > 50:
+        #
+        #     caption_consistency_loss = self.model(data, clipcap_model = self.clipcap_model, branch='caption_consistency')
+        #     loss['caption_consistency_loss'] = caption_consistency_loss
         # else:
-        #     caption_consistency_loss = self.model(data, clipcap_model=clipcap_model, branch='caption_consistency')
+        #     caption_consistency_loss = self.model(data, clipcap_model=self.clipcap_model, branch='caption_consistency')
         #     loss['caption_consistency_loss'] = caption_consistency_loss * 0.0
-        loss_dict.update(loss)
+        # loss_dict.update(loss)
         if isinstance(loss_dict, torch.Tensor):
             losses = loss_dict
             loss_dict = {"total_loss": loss_dict}
