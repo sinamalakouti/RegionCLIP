@@ -254,13 +254,13 @@ class SimpleTrainer(TrainerBase):
 
         self.model = model
 
-        self.clipcap_model = ClipCaptionModel(40, 40)
+        # self.clipcap_model = ClipCaptionModel(40, 40)
         #p = torch.load('/Users/sinamalakouti/Desktop/test-regionclip/transformer_weights.pt', 'cpu')
         p = torch.load('/projects/sina/RegionCLIP/pretrained_ckpt/transformer_weights.pt','cpu')
-        self.clipcap_model.load_state_dict(p)
-        self.clipcap_model.eval()
-        for p in self.clipcap_model.parameters():
-            p.requires_grad = False
+        # self.clipcap_model.load_state_dict(p)
+        # self.clipcap_model.eval()
+        # for p in self.clipcap_model.parameters():
+        #     p.requires_grad = False
 
         self.data_loader = data_loader
         self._data_loader_iter = iter(data_loader)
@@ -276,7 +276,7 @@ class SimpleTrainer(TrainerBase):
         If you want to do something with the data, you can wrap the dataloader.
         """
         self.model.zero_grad()
-        self.clipcap_model.zero_grad()
+        # self.clipcap_model.zero_grad()
         data = next(self._data_loader_iter)
         data_time = time.perf_counter() - start
 
