@@ -292,7 +292,7 @@ class SimpleTrainer(TrainerBase):
             p = torch.load('/projects/sina/RegionCLIP/pretrained_ckpt/transformer_weights.pt', 'cpu')
             clipcap_model.load_state_dict(p)
             clipcap_model.eval()
-            for p in self.clipcap_model.parameters():
+            for p in clipcap_model.parameters():
                 p.requires_grad = False
             caption_consistency_loss = self.model(data, clipcap_model =clipcap_model, branch='caption_consistency')
             loss['caption_consistency_loss'] = caption_consistency_loss
