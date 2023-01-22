@@ -394,7 +394,7 @@ def unsupervised_loss(prefix_teacher, prefix_student, model: ClipCaptionModel, p
         # output_list = list(tokens.squeeze().cpu().numpy())
         # output_text = model.tokenizer.decode(output_list)
         # generated_list.append(output_text)
-    return sum(losses)/len(losses) #, generated_list
+    return sum(losses)/len(losses), None#, generated_list
 
 
 
