@@ -157,7 +157,7 @@ class ModifiedResNet(Backbone):
             self.layer4 = self._make_layer(width * 8, layers[3], stride=2)
         else:  # C4, layer4 created here won't be used in backbone, but used in roi_head
             self.layer4 = self._make_layer(width * 8, layers[3], stride=2) # None
-        create_att_pool = True
+        # create_att_pool = True
         self.pool_vec = pool_vec
         if self.pool_vec or create_att_pool:  # pool a vector representation for an image
             embed_dim = width * 32  # the ResNet feature dimension
