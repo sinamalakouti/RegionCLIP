@@ -207,7 +207,7 @@ class GeneralizedRCNN(nn.Module):
             teacher_features = teacher_features.squeeze(1).detach()
             student_features = student_features.squeeze(1)
 
-            joint_features = teacher_features @ student_features.t()
+            joint_features = student_features @ teacher_features.t()
             n = len(teacher_features)
             ground_truth = torch.arange(n, dtype=torch.long, device=self.device)
             loss_fn = nn.CrossEntropyLoss()
