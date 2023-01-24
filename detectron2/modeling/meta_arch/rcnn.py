@@ -206,9 +206,7 @@ class GeneralizedRCNN(nn.Module):
 
             teacher_features = teacher_features.squeeze(1)
             student_features = student_features.squeeze(1)
-            print("here loss")
-            print(teacher_features.shape)
-            print(student_features.shape)
+            
             joint_features = teacher_features @ student_features.t()
             n = len(teacher_features)
             ground_truth = torch.arange(n, dtype=torch.long, device=self.device)

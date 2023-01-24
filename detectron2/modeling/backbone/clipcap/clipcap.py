@@ -516,7 +516,6 @@ def generate_feature_caption(prefix, model: ClipCaptionModel, prefix_length=10):
 
             logits = logits[:, -1, :] / (temperature if temperature > 0 else 1.0)
 
-
             sorted_logits, sorted_indices = torch.sort(logits, descending=True)
             cumulative_probs = torch.cumsum(nnf.softmax(sorted_logits, dim=-1), dim=-1)
             sorted_indices_to_remove = cumulative_probs > top_p
@@ -533,9 +532,10 @@ def generate_feature_caption(prefix, model: ClipCaptionModel, prefix_length=10):
             generated = torch.cat((generated, next_token_embed), dim=1)
 
             if stop_token_index == next_token.item():
-                res.append(features[:,-1,:])
+                res.append(features[:, -1, :])
                 break
     return res
+
 
 def generate2(
         model,
