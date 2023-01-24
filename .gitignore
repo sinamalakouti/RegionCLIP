@@ -69,3 +69,5 @@ _darcs
 /models
 /snippet
 *.yaml
+*.yaml
+configs/VOC-Experiments/faster_rcnn_CLIP_R_50_C4.yaml

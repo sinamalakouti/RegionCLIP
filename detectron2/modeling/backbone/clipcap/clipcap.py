@@ -329,7 +329,7 @@ def unsupervised_loss(prefix_teacher, prefix_student, model: ClipCaptionModel, p
     stop_token_index = model.tokenizer.encode(stop_token)[0]
     losses = []
     tokens = None
-    generated_list =[]
+    generated_list = []
     for p in model.parameters():
         p.requires_grad = False
     for entry_idx in range(len(embed_teacher)):
@@ -340,16 +340,18 @@ def unsupervised_loss(prefix_teacher, prefix_student, model: ClipCaptionModel, p
         for i in range(entry_length):
             # print(i)
 
-            outputs_teacher= model.gpt(inputs_embeds=generated_teacher)
+            outputs_teacher = model.gpt(inputs_embeds=generated_teacher)
             outputs_student = model.gpt(inputs_embeds=generated_student)
-            logits_teacher= outputs_teacher.logits.detach()
+            logits_teacher = outputs_teacher.logits.detach()
             logits_student = outputs_student.logits
 
             logits_teacher = logits_teacher[:, -1, :] / (temperature if temperature > 0 else 1.0)
             logits_student = logits_student[:, -1, :] / (temperature if temperature > 0 else 1.0)
             # print(logits_student == logits_teacher)
 
-            loss = torch.nn.functional.kl_div(torch.nn.functional.log_softmax(logits_student,dim=-1), torch.nn.functional.log_softmax(logits_teacher.detach(),dim=-1).detach(), reduction='batchmean',log_target=True)
+            loss = torch.nn.functional.kl_div(torch.nn.functional.log_softmax(logits_student, dim=-1),
+                                              torch.nn.functional.log_softmax(logits_teacher.detach(), dim=-1).detach(),
+                                              reduction='batchmean', log_target=True)
             # loss = torch.nn.functional.cross_entropy(logits_student, torch.softmax(logits_teacher,1).detach())
             # print(loss)
             entry_loss.append(loss)
@@ -367,13 +369,13 @@ def unsupervised_loss(prefix_teacher, prefix_student, model: ClipCaptionModel, p
                 logits_teacher[:, indices_to_remove] = filter_value
                 next_token_teacher = torch.argmax(logits_teacher, -1).unsqueeze(0)
                 next_token_embed_teacher = model.gpt.transformer.wte(next_token_teacher)
-            # if tokens is None:
-            #     tokens = next_token_teacher
-            # else:
-            #     tokens = torch.cat((tokens, next_token_teacher), dim=1)
+                # if tokens is None:
+                #     tokens = next_token_teacher
+                # else:
+                #     tokens = torch.cat((tokens, next_token_teacher), dim=1)
                 generated_teacher = torch.cat((generated_teacher, next_token_embed_teacher), dim=1)
 
-#student
+                # student
                 sorted_logits, sorted_indices = torch.sort(logits_student, descending=True)
                 cumulative_probs = torch.cumsum(nnf.softmax(sorted_logits, dim=-1), dim=-1)
                 sorted_indices_to_remove = cumulative_probs > top_p
@@ -394,10 +396,146 @@ def unsupervised_loss(prefix_teacher, prefix_student, model: ClipCaptionModel, p
         # output_list = list(tokens.squeeze().cpu().numpy())
         # output_text = model.tokenizer.decode(output_list)
         # generated_list.append(output_text)
-    return sum(losses)/len(losses), None#, generated_list
+    return sum(losses) / len(losses), None  # , generated_list
 
 
+def unsupervised_feature_loss(prefix_teacher, prefix_student, model: ClipCaptionModel, prefix_length=10):
+    gpt_embedding_size = model.gpt.transformer.wte.weight.shape[1]
 
+    embed_teacher = model.clip_project(prefix_teacher).view(-1, prefix_length, gpt_embedding_size).detach()
+
+    embed_student = model.clip_project(prefix_student).view(-1, prefix_length, gpt_embedding_size)
+
+    filter_value = -float("Inf")
+    model.eval()
+    entry_length = 67
+    temperature = 1.0
+    top_p = 0.8
+    stop_token: str = '.'
+    stop_token_index = model.tokenizer.encode(stop_token)[0]
+    losses = []
+    tokens = None
+    generated_list = []
+    for p in model.parameters():
+        p.requires_grad = False
+    for entry_idx in range(len(embed_teacher)):
+        generated_teacher = embed_teacher[entry_idx].unsqueeze(0)
+        generated_student = embed_student[entry_idx].unsqueeze(0)
+        entry_loss = []
+        tokens = None
+        for i in range(entry_length):
+            # print(i)
+            teacher_features = model.gpt(inputs_embeds=generated_teacher).logits().detach()
+            student_features = model.gpt(inputs_embeds=generated_student).logits()
+
+            logits_teacher = model.lm_head(teacher_features).detach()
+            logits_student = model.lm_head(student_features).detach()
+
+            logits_teacher = logits_teacher[:, -1, :] / (temperature if temperature > 0 else 1.0)
+            logits_student = logits_student[:, -1, :] / (temperature if temperature > 0 else 1.0)
+            # print(logits_student == logits_teacher)
+            loss_fn = nn.MSELoss()
+            loss = loss_fn(teacher_features.detach(), student_features)
+            # loss = torch.nn.functional.kl_div(torch.nn.functional.log_softmax(logits_student, dim=-1),
+            #                                   torch.nn.functional.log_softmax(logits_teacher.detach(), dim=-1).detach(),
+            #                                   reduction='batchmean', log_target=True)
+            # loss = torch.nn.functional.cross_entropy(logits_student, torch.softmax(logits_teacher,1).detach())
+            # print(loss)
+            entry_loss.append(loss)
+
+            with torch.no_grad():
+                sorted_logits, sorted_indices = torch.sort(logits_teacher, descending=True)
+                cumulative_probs = torch.cumsum(nnf.softmax(sorted_logits, dim=-1), dim=-1)
+                sorted_indices_to_remove = cumulative_probs > top_p
+                sorted_indices_to_remove[..., 1:] = sorted_indices_to_remove[
+                                                    ..., :-1
+                                                    ].clone()
+                sorted_indices_to_remove[..., 0] = 0
+
+                indices_to_remove = sorted_indices[sorted_indices_to_remove]
+                logits_teacher[:, indices_to_remove] = filter_value
+                next_token_teacher = torch.argmax(logits_teacher, -1).unsqueeze(0)
+                next_token_embed_teacher = model.gpt.transformer.wte(next_token_teacher)
+                # if tokens is None:
+                #     tokens = next_token_teacher
+                # else:
+                #     tokens = torch.cat((tokens, next_token_teacher), dim=1)
+                generated_teacher = torch.cat((generated_teacher, next_token_embed_teacher), dim=1)
+
+                # student
+                sorted_logits, sorted_indices = torch.sort(logits_student, descending=True)
+                cumulative_probs = torch.cumsum(nnf.softmax(sorted_logits, dim=-1), dim=-1)
+                sorted_indices_to_remove = cumulative_probs > top_p
+                sorted_indices_to_remove[..., 1:] = sorted_indices_to_remove[
+                                                    ..., :-1
+                                                    ].clone()
+                sorted_indices_to_remove[..., 0] = 0
+
+                indices_to_remove = sorted_indices[sorted_indices_to_remove]
+                logits_student[:, indices_to_remove] = filter_value
+                next_token_student = torch.argmax(logits_student, -1).unsqueeze(0)
+                next_token_embed_student = model.gpt.transformer.wte(next_token_student)
+
+                generated_student = torch.cat((generated_student, next_token_embed_student), dim=1)
+                if stop_token_index == next_token_teacher.item():
+                    break
+        losses.append(sum(entry_loss) / len(entry_loss))
+        # output_list = list(tokens.squeeze().cpu().numpy())
+        # output_text = model.tokenizer.decode(output_list)
+        # generated_list.append(output_text)
+    return sum(losses) / len(losses), None  # , generated_list
+
+
+def generate_feature_caption(prefix, model: ClipCaptionModel, prefix_length=10):
+    gpt_embedding_size = model.gpt.transformer.wte.weight.shape[1]
+
+    embed = model.clip_project(prefix).view(-1, prefix_length, gpt_embedding_size)
+
+    filter_value = -float("Inf")
+    model.eval()
+    entry_length = 67
+    temperature = 1.0
+    top_p = 0.8
+    stop_token: str = '.'
+    stop_token_index = model.tokenizer.encode(stop_token)[0]
+    losses = []
+    tokens = None
+    generated_list = []
+
+    res = []
+    for p in model.parameters():
+        p.requires_grad = False
+    for entry_idx in range(len(embed)):
+        generated = embed[entry_idx].unsqueeze(0)
+        tokens = None
+        for i in range(entry_length):
+            # print(i)
+            features = model.gpt(inputs_embeds=generated).logits()
+
+            logits = model.lm_head(features)
+
+            logits = logits[:, -1, :] / (temperature if temperature > 0 else 1.0)
+
+            with torch.no_grad():
+                sorted_logits, sorted_indices = torch.sort(logits, descending=True)
+                cumulative_probs = torch.cumsum(nnf.softmax(sorted_logits, dim=-1), dim=-1)
+                sorted_indices_to_remove = cumulative_probs > top_p
+                sorted_indices_to_remove[..., 1:] = sorted_indices_to_remove[
+                                                    ..., :-1
+                                                    ].clone()
+                sorted_indices_to_remove[..., 0] = 0
+
+                indices_to_remove = sorted_indices[sorted_indices_to_remove]
+                logits[:, indices_to_remove] = filter_value
+                next_token = torch.argmax(logits, -1).unsqueeze(0)
+                next_token_embed = model.gpt.transformer.wte(next_token)
+
+                generated = torch.cat((generated, next_token_embed), dim=1)
+
+            if stop_token_index == next_token.item():
+                res.append(logits)
+                break
+    return res
 
 def generate2(
         model,
