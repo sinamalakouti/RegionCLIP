@@ -161,9 +161,6 @@ class ModifiedResNet(Backbone):
         self.pool_vec = pool_vec
         if self.pool_vec or create_att_pool:  # pool a vector representation for an image
             embed_dim = width * 32  # the ResNet feature dimension
-            print("hereeeee")
-            print(input_resolution)
-            print(input_resolution // 32)
             self.attnpool = AttentionPool2d(input_resolution // 32, embed_dim, heads, output_dim)
         # if create_att_pool:  # freeze attnpool layer
         #     for p in self.attnpool.parameters(): p.requires_grad = False
