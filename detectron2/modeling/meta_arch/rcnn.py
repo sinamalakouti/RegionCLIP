@@ -192,7 +192,7 @@ class GeneralizedRCNN(nn.Module):
             prefix_trgt = self.backbone.attnpool(self.backbone(images_target)['res5'])
 
             del images_src
-            del prefix_src
+            # del prefix_src
             del images_target
             del batched_inputs
             # loss, captions = unsupervised_loss(prefix_src, prefix_trgt, clipcap_model.to(self.device), 40)
