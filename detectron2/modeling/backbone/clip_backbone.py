@@ -157,7 +157,8 @@ class ModifiedResNet(Backbone):
             self.layer4 = self._make_layer(width * 8, layers[3], stride=2)
         else:  # C4, layer4 created here won't be used in backbone, but used in roi_head
             self.layer4 = self._make_layer(width * 8, layers[3], stride=2) # None
-        # create_att_pool = True
+        create_att_pool = True
+        pool_vec = True
         self.pool_vec = pool_vec
         if self.pool_vec or create_att_pool:  # pool a vector representation for an image
             embed_dim = width * 32  # the ResNet feature dimension
@@ -210,8 +211,6 @@ class ModifiedResNet(Backbone):
         x = self.layer3(x) # det2 resnet50: [1024, 50, 76]; CLIP resnet50: [1024, 14, 14]
         outputs['res4'] = x if "res4" in self._out_features else None
         x = self.layer4(x)  if "res5" in self._out_features else x # det2 resnet50: [2048, 25, 38]; CLIP resnet50: [2048, 7, 7]
-        print("resss5555555")
-        print(x.shape)
         outputs['res5'] = x if "res5" in self._out_features else None
 
         if self.pool_vec:  # pool a vector representation for an image, for global image classification
