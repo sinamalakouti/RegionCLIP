@@ -510,7 +510,7 @@ def generate_feature_caption(prefix, model: ClipCaptionModel, prefix_length=10):
         tokens = None
         for i in range(entry_length):
             # print(i)
-            features = model.gpt(inputs_embeds=generated).logits()
+            features = model.gpt(inputs_embeds=generated).logits
 
             logits = model.lm_head(features)
 
