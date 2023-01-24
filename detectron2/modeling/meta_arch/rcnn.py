@@ -201,11 +201,11 @@ class GeneralizedRCNN(nn.Module):
             student_features = generate_feature_caption(prefix_trgt, clipcap_model.to(self.device), 40)
             student_features = torch.stack(student_features, 0)
 
-            teacher_features = (teacher_features / teacher_features.norm(dim=1, keepdim=True)).detach()
-            student_features = student_features / student_features.norm(dim=1, keepdim=True)
-
             teacher_features = teacher_features.squeeze(1).detach()
             student_features = student_features.squeeze(1)
+
+            teacher_features = (teacher_features / teacher_features.norm(dim=1, keepdim=True)).detach()
+            student_features = student_features / student_features.norm(dim=1, keepdim=True)
 
             joint_features = student_features @ teacher_features.t()
             n = len(teacher_features)
