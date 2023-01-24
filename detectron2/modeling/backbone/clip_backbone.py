@@ -211,6 +211,8 @@ class ModifiedResNet(Backbone):
         x = self.layer3(x) # det2 resnet50: [1024, 50, 76]; CLIP resnet50: [1024, 14, 14]
         outputs['res4'] = x if "res4" in self._out_features else None
         x = self.layer4(x)  if "res5" in self._out_features else x # det2 resnet50: [2048, 25, 38]; CLIP resnet50: [2048, 7, 7]
+        print("*"*10)
+        print("res5" in self._out_features)
         outputs['res5'] = x if "res5" in self._out_features else None
 
         if self.pool_vec:  # pool a vector representation for an image, for global image classification
