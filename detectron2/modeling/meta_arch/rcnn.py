@@ -199,7 +199,9 @@ class GeneralizedRCNN(nn.Module):
             gt_instances = None
         # eg: {'p2': torch.Size([b, c, 200, 304]), 'p3': torch.Size([b, c, 100, 152]), 'p4': torch.Size([b, c, 50, 76]), 'p5': torch.Size([b, c, 25, 38]), 'p6': torch.Size([b, c, 13, 19])}
         features = self.backbone(images.tensor)
-
+        print("featuressssss")
+        print(features['res4'].shape)
+        print(features['res5'].shape)
         if self.proposal_generator is not None:
             proposals, proposal_losses = self.proposal_generator(images, features, gt_instances)
         else:
