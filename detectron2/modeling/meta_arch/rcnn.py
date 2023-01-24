@@ -199,7 +199,9 @@ class GeneralizedRCNN(nn.Module):
 
             teacher_features = teacher_features / teacher_features.norm(dim=1, keepdim=True).detach()
             student_features = student_features / student_features.norm(dim=1, keepdim=True)
-
+            print("here loss")
+            print(teacher_features.shape)
+            print(student_features.shape)
             joint_features =    teacher_features @ student_features.t()
             n = len(teacher_features)
             ground_truth = torch.arange(n, dtype=torch.long, device=self.device)
