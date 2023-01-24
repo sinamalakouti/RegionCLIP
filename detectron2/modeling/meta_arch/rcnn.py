@@ -199,6 +199,9 @@ class GeneralizedRCNN(nn.Module):
 
             teacher_features = teacher_features / teacher_features.norm(dim=1, keepdim=True).detach()
             student_features = student_features / student_features.norm(dim=1, keepdim=True)
+
+            teacher_features = teacher_features.squeeze(1)
+            student_features = student_features.squeeze(1)
             print("here loss")
             print(teacher_features.shape)
             print(student_features.shape)
