@@ -8,8 +8,8 @@ from torch import nn
 
 from .backbone import Backbone
 from .build import BACKBONE_REGISTRY
-from detectron2.layers.blocks import FrozenBatchNorm2d
 from detectron2.layers import ShapeSpec
+from detectron2.layers.blocks import FrozenBatchNorm2d
 
 class Bottleneck(nn.Module):
     expansion = 4
