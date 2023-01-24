@@ -188,7 +188,7 @@ class ClipCaptionModel(nn.Module):
             generated_text_prefix = generate2(self, self.tokenizer, embed=prefix_embed)
         return generated_text_prefix
 
-    def __init__(self, prefix_length: int, clip_length: Optional[int] = None, prefix_size: int = 640,
+    def __init__(self, prefix_length: int, clip_length: Optional[int] = None, prefix_size: int = 1024,
                  num_layers: int = 8, mapping_type: MappingType = MappingType.Transformer):
         super(ClipCaptionModel, self).__init__()
         self.prefix_length = prefix_length
