@@ -19,9 +19,13 @@ from ..postprocessing import detector_postprocess
 from ..proposal_generator import build_proposal_generator
 from ..roi_heads import build_roi_heads
 from .build import META_ARCH_REGISTRY
-from ..backbone.clipcap.clipcap import  unsupervised_loss, unsupervised_feature_loss, generate_feature_caption
+from ..backbone.clipcap.clipcap import unsupervised_loss, unsupervised_feature_loss, generate_feature_caption
+
 __all__ = ["GeneralizedRCNN", "ProposalNetwork"]
+
 from torchvision.transforms import Resize
+
+
 @META_ARCH_REGISTRY.register()
 class GeneralizedRCNN(nn.Module):
     """
@@ -33,17 +37,17 @@ class GeneralizedRCNN(nn.Module):
 
     @configurable
     def __init__(
-        self,
-        *,
-        backbone: Backbone,
-        proposal_generator: nn.Module,
-        roi_heads: nn.Module,
-        pixel_mean: Tuple[float],
-        pixel_std: Tuple[float],
-        input_format: Optional[str] = None,
-        vis_period: int = 0,
-        use_clip_c4: False,
-        use_clip_attpool: False,
+            self,
+            *,
+            backbone: Backbone,
+            proposal_generator: nn.Module,
+            roi_heads: nn.Module,
+            pixel_mean: Tuple[float],
+            pixel_std: Tuple[float],
+            input_format: Optional[str] = None,
+            vis_period: int = 0,
+            use_clip_c4: False,
+            use_clip_attpool: False,
     ):
         """
         Args:
@@ -68,15 +72,15 @@ class GeneralizedRCNN(nn.Module):
         self.register_buffer("pixel_mean", torch.tensor(pixel_mean).view(-1, 1, 1), False)
         self.register_buffer("pixel_std", torch.tensor(pixel_std).view(-1, 1, 1), False)
         assert (
-            self.pixel_mean.shape == self.pixel_std.shape
+                self.pixel_mean.shape == self.pixel_std.shape
         ), f"{self.pixel_mean} and {self.pixel_std} have different shapes!"
-        if np.sum(pixel_mean) < 3.0: # converrt pixel value to range [0.0, 1.0] by dividing 255.0
+        if np.sum(pixel_mean) < 3.0:  # converrt pixel value to range [0.0, 1.0] by dividing 255.0
             assert input_format == 'RGB'
             self.div_pixel = True
-        else: # default setting
+        else:  # default setting
             self.div_pixel = False
-        self.use_clip_c4 = use_clip_c4 # if True, use C4 mode where roi_head uses the last resnet layer from backbone 
-        self.use_clip_attpool = use_clip_attpool # if True (C4+text_emb_as_classifier), use att_pool to replace default mean pool
+        self.use_clip_c4 = use_clip_c4  # if True, use C4 mode where roi_head uses the last resnet layer from backbone
+        self.use_clip_attpool = use_clip_attpool  # if True (C4+text_emb_as_classifier), use att_pool to replace default mean pool
 
         # self.clipcap_model = ClipCaptionModel(40, 40)
         # p = torch.load('/Users/sinamalakouti/Desktop/test-regionclip/transformer_weights.pt', 'cpu')
@@ -148,8 +152,8 @@ class GeneralizedRCNN(nn.Module):
         images_t = [(x - self.pixel_mean) / self.pixel_std for x in images_t]
         images_t = ImageList.from_tensors(images_t, self.backbone.size_divisibility)
 
-        resizer = Resize((224,224))
-        images  = resizer(images.tensor)
+        resizer = Resize((224, 224))
+        images = resizer(images.tensor)
         images_t = resizer(images_t.tensor)
         return images, images_t
 
@@ -180,20 +184,20 @@ class GeneralizedRCNN(nn.Module):
         if not self.training:
             return self.inference(batched_inputs)
         if branch == 'caption_consistency':
-
             images_src, images_target = self.preprocess_image_train(batched_inputs)
-
-            prefix_src = self.backbone.attnpool(self.backbone(images_src)['res5'])
+            with torch.no_grad():
+                prefix_src = self.backbone.attnpool(self.backbone(images_src)['res5'])
+                teacher_features = generate_feature_caption(prefix_src, clipcap_model.to(self.device), 40)
+                teacher_features = torch.stack(teacher_features, 0)
             prefix_trgt = self.backbone.attnpool(self.backbone(images_target)['res5'])
 
             del images_src
+            del prefix_src
             del images_target
             del batched_inputs
             # loss, captions = unsupervised_loss(prefix_src, prefix_trgt, clipcap_model.to(self.device), 40)
             # loss, captions = unsupervised_feature_loss(prefix_src, prefix_trgt, clipcap_model.to(self.device), 40)
 
-            teacher_features = generate_feature_caption(prefix_src, clipcap_model.to(self.device), 40)
-            teacher_features = torch.stack(teacher_features, 0).detach()
             student_features = generate_feature_caption(prefix_trgt, clipcap_model.to(self.device), 40)
             student_features = torch.stack(student_features, 0)
 
@@ -205,7 +209,7 @@ class GeneralizedRCNN(nn.Module):
             print("here loss")
             print(teacher_features.shape)
             print(student_features.shape)
-            joint_features =    teacher_features @ student_features.t()
+            joint_features = teacher_features @ student_features.t()
             n = len(teacher_features)
             ground_truth = torch.arange(n, dtype=torch.long, device=self.device)
             loss_fn = nn.CrossEntropyLoss()
@@ -226,11 +230,13 @@ class GeneralizedRCNN(nn.Module):
             proposals = [x["proposals"].to(self.device) for x in batched_inputs]
             proposal_losses = {}
 
-        if self.use_clip_c4: # use C4 + resnet weights from CLIP
-            if self.use_clip_attpool: # use att_pool from CLIP to match dimension
-                _, detector_losses = self.roi_heads(images, features, proposals, gt_instances, res5=self.backbone.layer4, attnpool=self.backbone.attnpool)
-            else: # use default mean pool
-                _, detector_losses = self.roi_heads(images, features, proposals, gt_instances, res5=self.backbone.layer4)
+        if self.use_clip_c4:  # use C4 + resnet weights from CLIP
+            if self.use_clip_attpool:  # use att_pool from CLIP to match dimension
+                _, detector_losses = self.roi_heads(images, features, proposals, gt_instances,
+                                                    res5=self.backbone.layer4, attnpool=self.backbone.attnpool)
+            else:  # use default mean pool
+                _, detector_losses = self.roi_heads(images, features, proposals, gt_instances,
+                                                    res5=self.backbone.layer4)
         else:  # default setting
             _, detector_losses = self.roi_heads(images, features, proposals, gt_instances)
         if self.vis_period > 0:
@@ -244,10 +250,10 @@ class GeneralizedRCNN(nn.Module):
         return losses
 
     def inference(
-        self,
-        batched_inputs: List[Dict[str, torch.Tensor]],
-        detected_instances: Optional[List[Instances]] = None,
-        do_postprocess: bool = True,
+            self,
+            batched_inputs: List[Dict[str, torch.Tensor]],
+            detected_instances: Optional[List[Instances]] = None,
+            do_postprocess: bool = True,
     ):
         """
         Run inference on the given inputs.
@@ -277,26 +283,30 @@ class GeneralizedRCNN(nn.Module):
             else:
                 assert "proposals" in batched_inputs[0]
                 proposals = [x["proposals"].to(self.device) for x in batched_inputs]
-                
-            if self.use_clip_c4: # use C4 + resnet weights from CLIP
-                if self.use_clip_attpool: # use att_pool from CLIP to match dimension
-                    results, _ = self.roi_heads(images, features, proposals, None, res5=self.backbone.layer4, attnpool=self.backbone.attnpool)
-                else: # use default mean pool
+
+            if self.use_clip_c4:  # use C4 + resnet weights from CLIP
+                if self.use_clip_attpool:  # use att_pool from CLIP to match dimension
+                    results, _ = self.roi_heads(images, features, proposals, None, res5=self.backbone.layer4,
+                                                attnpool=self.backbone.attnpool)
+                else:  # use default mean pool
                     results, _ = self.roi_heads(images, features, proposals, None, res5=self.backbone.layer4)
             else:  # default setting
-                results, _  = self.roi_heads(images, features, proposals, None)
+                results, _ = self.roi_heads(images, features, proposals, None)
         else:
             detected_instances = [x.to(self.device) for x in detected_instances]
-            
-            if self.use_clip_c4: # use C4 + resnet weights from CLIP
-                if self.use_clip_attpool: # use att_pool from CLIP to match dimension
-                    results = self.roi_heads.forward_with_given_boxes(features, detected_instances, res5=self.backbone.layer4, attnpool=self.backbone.attnpool)
-                else: # use default mean pool
-                    results = self.roi_heads.forward_with_given_boxes(features, detected_instances, res5=self.backbone.layer4)
+
+            if self.use_clip_c4:  # use C4 + resnet weights from CLIP
+                if self.use_clip_attpool:  # use att_pool from CLIP to match dimension
+                    results = self.roi_heads.forward_with_given_boxes(features, detected_instances,
+                                                                      res5=self.backbone.layer4,
+                                                                      attnpool=self.backbone.attnpool)
+                else:  # use default mean pool
+                    results = self.roi_heads.forward_with_given_boxes(features, detected_instances,
+                                                                      res5=self.backbone.layer4)
             else:  # default setting
                 results = self.roi_heads.forward_with_given_boxes(features, detected_instances)
-        
-        #visualize_proposals(batched_inputs, proposals, self.input_format)
+
+        # visualize_proposals(batched_inputs, proposals, self.input_format)
         if do_postprocess:
             assert not torch.jit.is_scripting(), "Scripting is not supported for postprocess."
             return GeneralizedRCNN._postprocess(results, batched_inputs, images.image_sizes)
@@ -323,7 +333,7 @@ class GeneralizedRCNN(nn.Module):
         # note: private function; subject to changes
         processed_results = []
         for results_per_image, input_per_image, image_size in zip(
-            instances, batched_inputs, image_sizes
+                instances, batched_inputs, image_sizes
         ):
             height = input_per_image.get("height", image_size[0])
             width = input_per_image.get("width", image_size[1])
@@ -340,13 +350,13 @@ class ProposalNetwork(nn.Module):
 
     @configurable
     def __init__(
-        self,
-        *,
-        backbone: Backbone,
-        proposal_generator: nn.Module,
-        pixel_mean: Tuple[float],
-        pixel_std: Tuple[float],
-        input_format: Optional[str] = None,
+            self,
+            *,
+            backbone: Backbone,
+            proposal_generator: nn.Module,
+            pixel_mean: Tuple[float],
+            pixel_std: Tuple[float],
+            input_format: Optional[str] = None,
     ):
         """
         Args:
@@ -360,10 +370,10 @@ class ProposalNetwork(nn.Module):
         self.proposal_generator = proposal_generator
         self.register_buffer("pixel_mean", torch.tensor(pixel_mean).view(-1, 1, 1), False)
         self.register_buffer("pixel_std", torch.tensor(pixel_std).view(-1, 1, 1), False)
-        if np.sum(pixel_mean) < 3.0: # converrt pixel value to range [0.0, 1.0] by dividing 255.0
+        if np.sum(pixel_mean) < 3.0:  # converrt pixel value to range [0.0, 1.0] by dividing 255.0
             assert input_format == 'RGB'
             self.div_pixel = True
-        else: # default setting
+        else:  # default setting
             self.div_pixel = False
 
     @classmethod
@@ -417,7 +427,7 @@ class ProposalNetwork(nn.Module):
 
         processed_results = []
         for results_per_image, input_per_image, image_size in zip(
-            proposals, batched_inputs, images.image_sizes
+                proposals, batched_inputs, images.image_sizes
         ):
             height = input_per_image.get("height", image_size[0])
             width = input_per_image.get("width", image_size[1])
