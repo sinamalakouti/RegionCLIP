@@ -533,7 +533,7 @@ def generate_feature_caption(prefix, model: ClipCaptionModel, prefix_length=10):
                 generated = torch.cat((generated, next_token_embed), dim=1)
 
             if stop_token_index == next_token.item():
-                res.append(features[:,-1,:])
+                res.append(features[:,-1,:].squeeze(1))
                 break
     return res
 
