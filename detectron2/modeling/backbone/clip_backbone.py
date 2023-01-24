@@ -122,7 +122,7 @@ class ModifiedResNet(Backbone):
     - The final pooling layer is a QKV attention instead of an average pool
     """
 
-    def __init__(self, layers, output_dim, heads, input_resolution=224, width=64, 
+    def __init__(self, layers, output_dim, heads, input_resolution=288, width=64,
         out_features=None, freeze_at=0, depth=None, pool_vec=True, create_att_pool=False, norm_type='FronzenBN'):
         super().__init__()
         self.output_dim = output_dim
