@@ -39,6 +39,7 @@ from detectron2.evaluation import (
 )
 from detectron2.modeling import GeneralizedRCNNWithTTA
 
+#os.environ['CUDA_VISIBLE_DEVICES'] = "2"
 #os.environ['CUDA_LAUNCH_BLOCKING'] = '1'
 import torch.multiprocessing
 torch.multiprocessing.set_sharing_strategy('file_system')
