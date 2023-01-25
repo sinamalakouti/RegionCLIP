@@ -235,7 +235,7 @@ class GeneralizedRCNN(nn.Module):
             # print("EROORR" * 10)
             # print(ground_truth.shape)
             # print(joint_features.shape)
-            print(teacher_features)
+            # print(teacher_features)
             loss = loss_fn(teacher_features.detach(), student_features)
 
             return loss
