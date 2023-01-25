@@ -191,10 +191,7 @@ class GeneralizedRCNN(nn.Module):
                 teacher_features = torch.stack(teacher_features, 0)
 
 
-            del images_src
-            # del prefix_src
-            del images_target
-            del batched_inputs
+
             # loss, captions = unsupervised_loss(prefix_src, prefix_trgt, clipcap_model.to(self.device), 40)
             # loss, captions = unsupervised_feature_loss(prefix_src, prefix_trgt, clipcap_model.to(self.device), 40)
             prefix_trgt = self.backbone.attnpool(self.backbone(images_target)['res5'])
@@ -203,7 +200,10 @@ class GeneralizedRCNN(nn.Module):
 
             teacher_features = teacher_features.squeeze(1).detach()
             student_features = student_features.squeeze(1)
-
+            del images_src
+            # del prefix_src
+            del images_target
+            del batched_inputs
             if student_features.shape != teacher_features.shape:
                 print("jizzzzzz")
                 print(self.training)
