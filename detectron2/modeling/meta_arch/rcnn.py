@@ -226,7 +226,7 @@ class GeneralizedRCNN(nn.Module):
             #     print(self.training)
             # joint_features = student_features @ teacher_features.t()
             # n = 4
-            ground_truth = torch.arange(n, dtype=torch.long, device=self.device)
+            # ground_truth = torch.arange(n, dtype=torch.long, device=self.device)
             # print("n isssssssssssss   ", n)
             # print(ground_truth)
             # print(joint_features.shape)
