@@ -208,7 +208,7 @@ class GeneralizedRCNN(nn.Module):
             student_features = student_features / student_features.norm(dim=1, keepdim=True)
 
             joint_features = student_features @ teacher_features.t()
-            n = len(teacher_features)
+            n = 4
             ground_truth = torch.arange(n, dtype=torch.long, device=self.device)
             # print("n isssssssssssss   ", n)
             # print(ground_truth)
