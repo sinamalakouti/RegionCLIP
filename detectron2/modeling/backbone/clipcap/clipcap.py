@@ -501,17 +501,19 @@ def generate_feature_caption(prefix, model: ClipCaptionModel, prefix_length=10):
     losses = []
     tokens = None
     generated_list = []
-
+    break_flag = False
+    final_features= None
     res = []
     for p in model.parameters():
         p.requires_grad = False
     for entry_idx in range(len(embed)):
         generated = embed[entry_idx].unsqueeze(0)
         tokens = None
+        break_flag = False
         for i in range(entry_length):
             # print(i)
             features = model.gpt(inputs_embeds=generated).logits
-
+            final_features = features
             logits = model.lm_head(features)
 
             logits = logits[:, -1, :] / (temperature if temperature > 0 else 1.0)
@@ -533,7 +535,11 @@ def generate_feature_caption(prefix, model: ClipCaptionModel, prefix_length=10):
 
             if stop_token_index == next_token.item():
                 res.append(features[:, -1, :])
+                final_features = None
                 break
+        if final_features is not None:
+            res.append(final_features[:, -1, :])
+
     return res
 
 
