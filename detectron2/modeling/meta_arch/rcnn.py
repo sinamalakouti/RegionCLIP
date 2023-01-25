@@ -216,8 +216,8 @@ class GeneralizedRCNN(nn.Module):
 
 
 
-            # teacher_features = (teacher_features / teacher_features.norm(dim=1, keepdim=True)).detach()
-            # student_features = student_features / student_features.norm(dim=1, keepdim=True)
+            teacher_features = (teacher_features / teacher_features.norm(dim=1, keepdim=True)).detach()
+            student_features = student_features / student_features.norm(dim=1, keepdim=True)
 
             # if student_features.shape != teacher_features.shape:
             #     print("jizzzzzz")
