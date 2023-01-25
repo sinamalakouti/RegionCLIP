@@ -205,6 +205,12 @@ class GeneralizedRCNN(nn.Module):
             del images_target
             del batched_inputs
 
+            if student_features.shape != teacher_features.shape:
+                print("gooz")
+                print(student_features.shape)
+                print(teacher_features.shape)
+                print(self.training)
+
 
             teacher_features = (teacher_features / teacher_features.norm(dim=1, keepdim=True)).detach()
             student_features = student_features / student_features.norm(dim=1, keepdim=True)
