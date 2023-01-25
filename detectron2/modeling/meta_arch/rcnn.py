@@ -204,13 +204,16 @@ class GeneralizedRCNN(nn.Module):
             # del prefix_src
             del images_target
             del batched_inputs
-            if student_features.shape != teacher_features.shape:
-                print("jizzzzzz")
-                print(self.training)
+
 
             teacher_features = (teacher_features / teacher_features.norm(dim=1, keepdim=True)).detach()
             student_features = student_features / student_features.norm(dim=1, keepdim=True)
 
+            if student_features.shape != teacher_features.shape:
+                print("jizzzzzz")
+                print(student_features.shape)
+                print(teacher_features.shape)
+                print(self.training)
             joint_features = student_features @ teacher_features.t()
             n = 4
             ground_truth = torch.arange(n, dtype=torch.long, device=self.device)
@@ -219,9 +222,9 @@ class GeneralizedRCNN(nn.Module):
             # print(joint_features.shape)
 
             loss_fn = nn.CrossEntropyLoss()
-            print("EROORR" * 10)
-            print(ground_truth.shape)
-            print(joint_features.shape)
+            # print("EROORR" * 10)
+            # print(ground_truth.shape)
+            # print(joint_features.shape)
             loss = loss_fn(joint_features, ground_truth)
 
             return loss
