@@ -217,7 +217,13 @@ class GeneralizedRCNN(nn.Module):
             loss_fn = nn.CrossEntropyLoss()
             if len(ground_truth) ==3:
                 print("nooooo " *100)
-            loss = loss_fn(joint_features, ground_truth)
+            try:
+                loss = loss_fn(joint_features, ground_truth)
+            except:
+                print("EROORR" * 10)
+                print( ground_truth.shape)
+                print(joint_features.shape)
+
             return loss
 
         images = self.preprocess_image(batched_inputs)
