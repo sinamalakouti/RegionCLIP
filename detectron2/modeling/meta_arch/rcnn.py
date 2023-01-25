@@ -185,6 +185,14 @@ class GeneralizedRCNN(nn.Module):
             return self.inference(batched_inputs)
         if branch == 'caption_consistency':
             images_src, images_target = self.preprocess_image_train(batched_inputs)
+
+            if images_src.shape != images_target.shape:
+                print("gooz11")
+                print(images_src.shape)
+                print(images_target.shape)
+                print(self.training)
+
+
             with torch.no_grad():
                 prefix_src = self.backbone.attnpool(self.backbone(images_src)['res5'])
                 teacher_features = generate_feature_caption(prefix_src, clipcap_model.to(self.device), 40)
@@ -205,11 +213,7 @@ class GeneralizedRCNN(nn.Module):
             del images_target
             del batched_inputs
 
-            if student_features.shape != teacher_features.shape:
-                print("gooz")
-                print(student_features.shape)
-                print(teacher_features.shape)
-                print(self.training)
+
 
 
             teacher_features = (teacher_features / teacher_features.norm(dim=1, keepdim=True)).detach()
