@@ -219,23 +219,23 @@ class GeneralizedRCNN(nn.Module):
             teacher_features = (teacher_features / teacher_features.norm(dim=1, keepdim=True)).detach()
             student_features = student_features / student_features.norm(dim=1, keepdim=True)
 
-            if student_features.shape != teacher_features.shape:
-                print("jizzzzzz")
-                print(student_features.shape)
-                print(teacher_features.shape)
-                print(self.training)
-            joint_features = student_features @ teacher_features.t()
-            n = 4
+            # if student_features.shape != teacher_features.shape:
+            #     print("jizzzzzz")
+            #     print(student_features.shape)
+            #     print(teacher_features.shape)
+            #     print(self.training)
+            # joint_features = student_features @ teacher_features.t()
+            # n = 4
             ground_truth = torch.arange(n, dtype=torch.long, device=self.device)
             # print("n isssssssssssss   ", n)
             # print(ground_truth)
             # print(joint_features.shape)
 
-            loss_fn = nn.CrossEntropyLoss()
+            loss_fn = nn.MSELoss()
             # print("EROORR" * 10)
             # print(ground_truth.shape)
             # print(joint_features.shape)
-            loss = loss_fn(joint_features, ground_truth)
+            loss = loss_fn(teacher_features.detach(), student_features)
 
             return loss
 
