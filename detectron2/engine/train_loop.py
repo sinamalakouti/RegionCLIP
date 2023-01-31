@@ -279,7 +279,7 @@ class SimpleTrainer(TrainerBase):
 
             return hook
 
-        self.clipcap_model.gpt.transformer.h[0].register_forward_hook(get_activation['first_layer'])
+        self.clipcap_model.gpt.transformer.h[0].register_forward_hook(get_activation('first_layer'))
 
         self.data_loader = data_loader
         self._data_loader_iter = iter(data_loader)
