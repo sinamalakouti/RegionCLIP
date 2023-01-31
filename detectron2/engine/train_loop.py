@@ -264,8 +264,8 @@ class SimpleTrainer(TrainerBase):
         self.model = model
 
         self.clipcap_model = ClipCaptionModel(40, 40)
-        # p = torch.load('/Users/sinamalakouti/Desktop/test-regionclip/transformer_weights.pt', 'cpu')
-        p = torch.load('/projects/sina/RegionCLIP/pretrained_ckpt/transformer_weights_r50.pt', 'cpu')
+        p = torch.load('/Users/sinamalakouti/Desktop/test-regionclip/transformer_weights_r50.pt', 'cpu')
+        # p = torch.load('/projects/sina/RegionCLIP/pretrained_ckpt/transformer_weights_r50.pt', 'cpu')
         self.clipcap_model.load_state_dict(p)
         self.clipcap_model.lm_head = self.clipcap_model.gpt.lm_head
         self.clipcap_model.gpt.lm_head = Identity()
@@ -275,7 +275,7 @@ class SimpleTrainer(TrainerBase):
 
         def get_activation(name):
             def hook(model, input, output):
-                self.clipcap_model.activation[name] = output.detach()
+                self.clipcap_model.activation[name] = output[0].detach()
 
             return hook
 
@@ -305,7 +305,7 @@ class SimpleTrainer(TrainerBase):
 
         loss_dict = self.model(data)
         loss = {}
-        if self.iter > 4000:
+        if self.iter > 0:
 
             caption_consistency_loss = self.model(data, clipcap_model=self.clipcap_model, branch='caption_consistency')
             loss['caption_consistency_loss'] = caption_consistency_loss
