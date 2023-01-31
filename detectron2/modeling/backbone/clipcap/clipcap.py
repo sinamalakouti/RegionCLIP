@@ -571,11 +571,11 @@ def generate_first_feature_caption(prefix, model: ClipCaptionModel, prefix_lengt
         out_features = None
         for i in range(entry_length):
             # print(i)
-            features = model.gpt(inputs_embeds=generated).logits
+            features = model.gpt(inputs_embeds=generated)
 
             out_features = model.activation['first_layer']
 
-            logits = model.lm_head(features)
+            logits = features.logits
 
             logits = logits[:, -1, :] / (temperature if temperature > 0 else 1.0)
 
