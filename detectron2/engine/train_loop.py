@@ -275,7 +275,7 @@ class SimpleTrainer(TrainerBase):
 
         def get_activation(name):
             def hook(model, input, output):
-                self.clipcap_model.activation[name] = output[0].detach()
+                self.clipcap_model.activation[name] = output[0]
 
             return hook
 
