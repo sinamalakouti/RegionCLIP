@@ -193,10 +193,10 @@ class GeneralizedRCNN(nn.Module):
                 print(self.training)
 
 
-
-            prefix_src = self.backbone.attnpool(self.backbone(images_src)['res5'])
-            teacher_features = generate_first_feature_caption(prefix_src, clipcap_model.to(self.device), 40)
-            teacher_features = torch.stack(teacher_features, 0)
+            with torch.no_grad():
+                prefix_src = self.backbone.attnpool(self.backbone(images_src)['res5'])
+                teacher_features = generate_first_feature_caption(prefix_src, clipcap_model.to(self.device), 40)
+                teacher_features = torch.stack(teacher_features, 0)
 
             prefix_trgt = self.backbone.attnpool(self.backbone(images_target)['res5'])
             student_features = generate_first_feature_caption(prefix_trgt, clipcap_model.to(self.device), 40)
