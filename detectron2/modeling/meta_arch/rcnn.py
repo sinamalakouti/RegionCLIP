@@ -19,7 +19,8 @@ from ..postprocessing import detector_postprocess
 from ..proposal_generator import build_proposal_generator
 from ..roi_heads import build_roi_heads
 from .build import META_ARCH_REGISTRY
-from ..backbone.clipcap.clipcap import unsupervised_loss, unsupervised_feature_loss, generate_feature_caption, generate_first_feature_caption
+from ..backbone.clipcap.clipcap import unsupervised_loss, unsupervised_feature_loss, generate_feature_caption, \
+    generate_first_feature_caption
 
 __all__ = ["GeneralizedRCNN", "ProposalNetwork"]
 
@@ -192,19 +193,17 @@ class GeneralizedRCNN(nn.Module):
                 print(images_target.shape)
                 print(self.training)
 
-
             with torch.no_grad():
                 prefix_src = self.backbone.attnpool(self.backbone(images_src)['res5'])
-                teacher_features = generate_feature_caption(prefix_src, clipcap_model.to(self.device), 40)
+                teacher_features = generate_first_feature_caption(prefix_src, clipcap_model.to(self.device), 40)
                 teacher_features = torch.stack(teacher_features, 0)
 
             prefix_trgt = self.backbone.attnpool(self.backbone(images_target)['res5'])
-            student_features = generate_feature_caption(prefix_trgt, clipcap_model.to(self.device), 40)
+            student_features = generate_first_feature_caption(prefix_trgt, clipcap_model.to(self.device), 40)
             student_features = torch.stack(student_features, 0)
 
             # loss, captions = unsupervised_loss(prefix_src, prefix_trgt, clipcap_model.to(self.device), 40)
             # loss, captions = unsupervised_feature_loss(prefix_src, prefix_trgt, clipcap_model.to(self.device), 40)
-
 
             teacher_features = teacher_features.squeeze(1).detach()
             student_features = student_features.squeeze(1)
@@ -212,9 +211,6 @@ class GeneralizedRCNN(nn.Module):
             # del prefix_src
             del images_target
             del batched_inputs
-
-
-
 
             teacher_features = (teacher_features / teacher_features.norm(dim=1, keepdim=True)).detach()
             student_features = student_features / student_features.norm(dim=1, keepdim=True)
