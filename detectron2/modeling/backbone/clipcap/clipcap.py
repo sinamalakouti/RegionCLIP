@@ -195,6 +195,7 @@ class ClipCaptionModel(nn.Module):
         self.gpt = GPT2LMHeadModel.from_pretrained('gpt2')
         self.gpt_embedding_size = self.gpt.transformer.wte.weight.shape[1]
         self.tokenizer = GPT2Tokenizer.from_pretrained("gpt2")
+        self.activation = {}
         if mapping_type == MappingType.MLP:
             self.clip_project = MLP((prefix_size, (self.gpt_embedding_size * prefix_length) // 2,
                                      self.gpt_embedding_size * prefix_length))
@@ -502,7 +503,7 @@ def generate_feature_caption(prefix, model: ClipCaptionModel, prefix_length=10):
     tokens = None
     generated_list = []
     break_flag = False
-    final_features= None
+    final_features = None
     res = []
     for p in model.parameters():
         p.requires_grad = False
@@ -539,6 +540,66 @@ def generate_feature_caption(prefix, model: ClipCaptionModel, prefix_length=10):
                 break
         if final_features is not None:
             res.append(final_features[:, -1, :])
+
+    return res
+
+
+def generate_first_feature_caption(prefix, model: ClipCaptionModel, prefix_length=10):
+    gpt_embedding_size = model.gpt.transformer.wte.weight.shape[1]
+
+    embed = model.clip_project(prefix).view(-1, prefix_length, gpt_embedding_size)
+
+    filter_value = -float("Inf")
+    model.eval()
+    entry_length = 67
+    temperature = 1.0
+    top_p = 0.8
+    stop_token: str = '.'
+    stop_token_index = model.tokenizer.encode(stop_token)[0]
+    losses = []
+    tokens = None
+    generated_list = []
+    break_flag = False
+    out_features = None
+    res = []
+    for p in model.parameters():
+        p.requires_grad = False
+    for entry_idx in range(len(embed)):
+        generated = embed[entry_idx].unsqueeze(0)
+        tokens = None
+        break_flag = False
+        out_features = None
+        for i in range(entry_length):
+            # print(i)
+            features = model.gpt(inputs_embeds=generated).logits
+
+            out_features = model.activation['first_layer']
+
+            logits = model.lm_head(features)
+
+            logits = logits[:, -1, :] / (temperature if temperature > 0 else 1.0)
+
+            sorted_logits, sorted_indices = torch.sort(logits, descending=True)
+            cumulative_probs = torch.cumsum(nnf.softmax(sorted_logits, dim=-1), dim=-1)
+            sorted_indices_to_remove = cumulative_probs > top_p
+            sorted_indices_to_remove[..., 1:] = sorted_indices_to_remove[
+                                                ..., :-1
+                                                ].clone()
+            sorted_indices_to_remove[..., 0] = 0
+
+            indices_to_remove = sorted_indices[sorted_indices_to_remove]
+            logits[:, indices_to_remove] = filter_value
+            next_token = torch.argmax(logits, -1).unsqueeze(0)
+            next_token_embed = model.gpt.transformer.wte(next_token)
+
+            generated = torch.cat((generated, next_token_embed), dim=1)
+
+            if stop_token_index == next_token.item():
+                res.append(out_features[:, -1, :])
+                out_features = None
+                break
+        if out_features is not None:
+            res.append(out_features[:, -1, :])
 
     return res
 

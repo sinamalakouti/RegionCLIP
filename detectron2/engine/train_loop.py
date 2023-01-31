@@ -265,13 +265,21 @@ class SimpleTrainer(TrainerBase):
 
         self.clipcap_model = ClipCaptionModel(40, 40)
         # p = torch.load('/Users/sinamalakouti/Desktop/test-regionclip/transformer_weights.pt', 'cpu')
-        p = torch.load('/projects/sina/RegionCLIP/pretrained_ckpt/transformer_weights_r50.pt','cpu')
+        p = torch.load('/projects/sina/RegionCLIP/pretrained_ckpt/transformer_weights_r50.pt', 'cpu')
         self.clipcap_model.load_state_dict(p)
         self.clipcap_model.lm_head = self.clipcap_model.gpt.lm_head
         self.clipcap_model.gpt.lm_head = Identity()
         self.clipcap_model.eval()
         for p in self.clipcap_model.parameters():
             p.requires_grad = False
+
+        def get_activation(name):
+            def hook(model, input, output):
+                self.clipcap_model.activation[name] = output.detach()
+
+            return hook
+
+        self.clipcap_model.gpt.transformer.h[0].register_forward_hook(get_activation['first_layer'])
 
         self.data_loader = data_loader
         self._data_loader_iter = iter(data_loader)
@@ -299,7 +307,7 @@ class SimpleTrainer(TrainerBase):
         loss = {}
         if self.iter > 4000:
 
-            caption_consistency_loss = self.model(data, clipcap_model = self.clipcap_model, branch='caption_consistency')
+            caption_consistency_loss = self.model(data, clipcap_model=self.clipcap_model, branch='caption_consistency')
             loss['caption_consistency_loss'] = caption_consistency_loss
         else:
             caption_consistency_loss = self.model(data, clipcap_model=self.clipcap_model, branch='caption_consistency')

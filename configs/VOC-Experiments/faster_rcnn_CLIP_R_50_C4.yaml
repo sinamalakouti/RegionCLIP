@@ -1,6 +1,7 @@
 _BASE_: "../Base-RCNN-C4.yaml"
 
 MODEL:
+  DEVICE: 'cpu'
   BACKBONE:
     NAME: "build_clip_resnet_backbone" #"build_clip_resnet_backbone" #"build_clip_resnet_fpn_backbone" # "build_resnet_fpn_backbone"
     FREEZE_AT: 2
@@ -10,8 +11,8 @@ MODEL:
     DEPTH: 50 #200
     OUT_FEATURES: ['res4', 'res5']  #["res4"]
     NORM: FrozenBN
-    STEM_OUT_CHANNELS: 64
-    RES2_OUT_CHANNELS: 256 #320
+#    STEM_OUT_CHANNELS: 64
+#    RES2_OUT_CHANNELS: 256 #320
   PIXEL_MEAN: [0.48145466, 0.4578275, 0.40821073] # [103.530, 116.280, 123.675] # 
   PIXEL_STD: [0.26862954, 0.26130258, 0.27577711] # [1.0, 1.0, 1.0] # 
   # CLIP:  # only for RN50x4
@@ -27,12 +28,12 @@ INPUT:
     MIN_SIZE_TEST: 800
     FORMAT: "RGB"
 DATASETS:
-  TRAIN: ('voc_2007_trainval', 'voc_2012_trainval')
+  TRAIN: ('Clipart1k_test', 'Clipart1k_test')
   TEST:  ('Clipart1k_test','Watercolor_test','Comic_test', 'voc_2007_test',)
 TEST:
         EVAL_PERIOD: 5050 #50000
 SOLVER:
-  IMS_PER_BATCH: 16 #4 #16
+  IMS_PER_BATCH: 1 #4 #16
   BASE_LR: 0.002
   STEPS: (12000, 16000)
   MAX_ITER: 30000  # 17.4epochs
