@@ -13,6 +13,7 @@ import json
 from typing import Tuple, Optional, Union
 import numpy as np
 
+import clip
 
 class MappingType(Enum):
     MLP = 'mlp'
@@ -603,7 +604,16 @@ def generate_first_feature_caption(prefix, model: ClipCaptionModel, prefix_lengt
 
     return res
 
-
+# def prompt_consistency_loss(images):
+#     classes = ['aeroplane', 'bird', 'bicycle', 'boat', 'bottle', 'bus', 'car', 'cat',
+#                'chair', 'cow', 'dining table', 'dog', 'horse', 'motorbike', 'person', 'potted plant',
+#                'sheep', 'sofa', 'train', 'tv/monitor']
+#
+#     prompts = ['image of ' + c for c in classes]
+#
+#     clip_model, clip_preprocess = clip.load("RN50", device='cpu')
+#
+#         self.clip_model.visual = None
 def generate2(
         model,
         tokenizer,
