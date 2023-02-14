@@ -22,6 +22,8 @@ from .build import META_ARCH_REGISTRY
 from ..backbone.clipcap.clipcap import unsupervised_loss, unsupervised_feature_loss, generate_feature_caption, \
     generate_first_feature_caption
 
+from ..backbone.clipcap.gather import GatherLayer
+
 __all__ = ["GeneralizedRCNN", "ProposalNetwork"]
 
 from torchvision.transforms import Resize
@@ -220,7 +222,10 @@ class GeneralizedRCNN(nn.Module):
             #     print(student_features.shape)
             #     print(teacher_features.shape)
             #     print(self.training)
+            all_teach_f = torch.cat(GatherLayer.apply(teacher_features))
+            all_stud_f = torch.cat(GatherLayer.apply(student_features))
             joint_features = student_features @ teacher_features.t()
+
             n = len(joint_features)
             ground_truth = torch.arange(n, dtype=torch.long, device=self.device)
             # print("n isssssssssssss   ", n)
@@ -233,9 +238,9 @@ class GeneralizedRCNN(nn.Module):
             # # print(joint_features.shape)
             # # print(teacher_features)
             # loss = loss_fn(teacher_features.detach(), student_features)
-            loss_fn = nn.CrossEntropyLoss()
+            loss_fn = nn.CrossEntropyLoss(reduction='sum')
             loss = loss_fn(joint_features, ground_truth)
-            return loss
+            return loss / n
 
         images = self.preprocess_image(batched_inputs)
         if "instances" in batched_inputs[0]:
