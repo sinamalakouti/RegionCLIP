@@ -227,8 +227,7 @@ class GeneralizedRCNN(nn.Module):
             joint_features = all_stud_f @ all_teach_f.t()
 
             n = len(joint_features)
-            print(joint_features.shape)
-            print("n for contrastive isss ", n)
+            
             ground_truth = torch.arange(n, dtype=torch.long, device=self.device)
             # print("n isssssssssssss   ", n)
             # print(ground_truthx1)
