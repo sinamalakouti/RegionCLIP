@@ -158,7 +158,7 @@ class GeneralizedRCNN(nn.Module):
         # resizer = Resize((224, 224))
         # images = resizer(images.tensor)
         # images_t = resizer(images_t.tens/or)
-        return images, images_t
+        return images.tensor, images_t.tensor
 
     def mask_correlated_samples(self, batch_size, world_size):
         N = 2 * batch_size * world_size
