@@ -226,8 +226,8 @@ class GeneralizedRCNN(nn.Module):
             del images_target
             del batched_inputs
 
-            # teacher_features = (teacher_features / teacher_features.norm(dim=1, keepdim=True))
-            # student_features = student_features / student_features.norm(dim=1, keepdim=True)
+            teacher_features = (teacher_features / teacher_features.norm(dim=1, keepdim=True))
+            student_features = student_features / student_features.norm(dim=1, keepdim=True)
 
             batch_size = 4
             world_size = 1
