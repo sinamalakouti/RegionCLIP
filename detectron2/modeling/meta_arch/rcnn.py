@@ -157,7 +157,7 @@ class GeneralizedRCNN(nn.Module):
 
         resizer = Resize((400, 400))
         images = resizer(images.tensor)
-        images_t = resizer(images_t.tens/or)
+        images_t = resizer(images_t.tensor)
         # print(images.shape)
         # print(images_t.tensor.shape)
         return images, images_t
