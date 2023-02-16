@@ -216,32 +216,30 @@ class GeneralizedRCNN(nn.Module):
 
             teacher_features = (teacher_features / teacher_features.norm(dim=1, keepdim=True))
             student_features = student_features / student_features.norm(dim=1, keepdim=True)
+            batch_size = 4
+            N = 2 * 4 * 4
 
+            z = torch.cat((teacher_features, student_features), dim=0)
             # if student_features.shape != teacher_features.shape:
             #     print("jizzzzzz")
             #     print(student_features.shape)
             #     print(teacher_features.shape)
             #     print(self.training)
-            all_teach_f = torch.cat(GatherLayer.apply(teacher_features))
-            all_stud_f = torch.cat(GatherLayer.apply(student_features))
-            joint_features = all_stud_f @ all_teach_f.t()
+            z = torch.cat(GatherLayer.apply(z))
+            sim = (z @ z.t()) / 0.5
 
-            n = len(joint_features)
-            
-            ground_truth = torch.arange(n, dtype=torch.long, device=self.device)
-            # print("n isssssssssssss   ", n)
-            # print(ground_truthx1)
-            # print(joint_features.shape)
+            sim_i_j = torch.diag(sim, 4 * 4)
+            sim_j_i = torch.diag(sim, -4 * 4)
 
-            # loss_fn = nn.MSELoss()
-            # # print("EROORR" * 10)
-            # # print(ground_truth.shape)
-            # # print(joint_features.shape)
-            # # print(teacher_features)
-            # loss = loss_fn(teacher_features.detach(), student_features)
-            loss_fn = nn.CrossEntropyLoss(reduction='sum')
-            loss = loss_fn(joint_features, ground_truth)
-            return loss / n
+            positive_samples = torch.cat((sim_i_j, sim_j_i), dim=0).reshape(N, 1)
+            negative_samples = sim[self.mask].reshape(N, -1)
+
+            labels = torch.zeros(N).to(positive_samples.device).long()
+            logits = torch.cat((positive_samples, negative_samples), dim=1)
+            criterion = nn.CrossEntropyLoss(reduction='sum')
+            loss = criterion(logits, labels)
+
+            return loss / N
 
         images = self.preprocess_image(batched_inputs)
         if "instances" in batched_inputs[0]:
