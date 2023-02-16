@@ -245,7 +245,7 @@ class GeneralizedRCNN(nn.Module):
             #     print(student_features.shape)
             #     print(teacher_features.shape)
             #     print(self.training)
-            sim = (z @ z.t()) / 0.07
+            sim = (z @ z.t()) / 1
 
             sim_i_j = torch.diag(sim, batch_size * 1)
             sim_j_i = torch.diag(sim, -batch_size* world_size)
