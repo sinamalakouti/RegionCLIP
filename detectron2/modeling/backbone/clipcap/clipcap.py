@@ -564,7 +564,7 @@ def generate_first_feature_caption(prefix, model: ClipCaptionModel, prefix_lengt
     out_features = None
     res = []
     for p in model.parameters():
-        p.requires_grad = False
+            p.requires_grad = False
     for entry_idx in range(len(embed)):
         generated = embed[entry_idx].unsqueeze(0)
         tokens = None

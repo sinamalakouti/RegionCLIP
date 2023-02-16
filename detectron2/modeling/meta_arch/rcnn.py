@@ -224,12 +224,12 @@ class GeneralizedRCNN(nn.Module):
             del batched_inputs
 
             teacher_features = (teacher_features / teacher_features.norm(dim=1, keepdim=True))
-            # teacher_features = torch.cat(GatherLayer.apply(teacher_features), dim=0)
+            teacher_features = torch.cat(GatherLayer.apply(teacher_features), dim=0)
 
             student_features = student_features / student_features.norm(dim=1, keepdim=True)
-            # student_features = torch.cat(GatherLayer.apply(student_features), dim=0)
-            batch_size = 1
-            N = 2 * 4
+            student_features = torch.cat(GatherLayer.apply(student_features), dim=0)
+            batch_size = 4
+            N = 2 * 4 * 4
 
             z = torch.cat((teacher_features, student_features), dim=0)
             # if student_features.shape != teacher_features.shape:
@@ -237,11 +237,11 @@ class GeneralizedRCNN(nn.Module):
             #     print(student_features.shape)
             #     print(teacher_features.shape)
             #     print(self.training)
-            sim = (z @ z.t()) / 0.5
+            sim = (z @ z.t()) / 0.07
 
-            sim_i_j = torch.diag(sim, 4 * 1)
-            sim_j_i = torch.diag(sim, -4 * 1)
-            self.mask = self.mask_correlated_samples(4,1)
+            sim_i_j = torch.diag(sim, 4 * 4)
+            sim_j_i = torch.diag(sim, -4 * 4)
+            self.mask = self.mask_correlated_samples(4,4)
             positive_samples = torch.cat((sim_i_j, sim_j_i), dim=0).reshape(N, 1)
             negative_samples = sim[self.mask].reshape(N, -1)
 
@@ -283,8 +283,6 @@ class GeneralizedRCNN(nn.Module):
         losses = {}
         losses.update(detector_losses)
         losses.update(proposal_losses)
-        for l in losses:
-            losses[l] = losses[l] * 0
         return losses
 
     def inference(
