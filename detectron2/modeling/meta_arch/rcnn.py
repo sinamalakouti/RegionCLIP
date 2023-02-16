@@ -160,6 +160,15 @@ class GeneralizedRCNN(nn.Module):
         images_t = resizer(images_t.tensor)
         return images, images_t
 
+    def mask_correlated_samples(self, batch_size, world_size):
+        N = 2 * batch_size * world_size
+        mask = torch.ones((N, N), dtype=bool)
+        mask = mask.fill_diagonal_(0)
+        for i in range(batch_size * world_size):
+            mask[i, batch_size * world_size + i] = 0
+            mask[batch_size * world_size + i, i] = 0
+        return mask
+
     def forward(self, batched_inputs: List[Dict[str, torch.Tensor]], clipcap_model=None, branch='supervised'):
         """
         Args:
@@ -215,7 +224,10 @@ class GeneralizedRCNN(nn.Module):
             del batched_inputs
 
             teacher_features = (teacher_features / teacher_features.norm(dim=1, keepdim=True))
+            teacher_features = torch.cat(GatherLayer.apply(teacher_features), dim=0)
+
             student_features = student_features / student_features.norm(dim=1, keepdim=True)
+            student_features = torch.cat(GatherLayer.apply(student_features), dim=0)
             batch_size = 4
             N = 2 * 4 * 4
 
@@ -225,12 +237,11 @@ class GeneralizedRCNN(nn.Module):
             #     print(student_features.shape)
             #     print(teacher_features.shape)
             #     print(self.training)
-            z = torch.cat(GatherLayer.apply(z))
             sim = (z @ z.t()) / 0.5
 
             sim_i_j = torch.diag(sim, 4 * 4)
             sim_j_i = torch.diag(sim, -4 * 4)
-
+            self.mask = self.mask_correlated_samples(4,4)
             positive_samples = torch.cat((sim_i_j, sim_j_i), dim=0).reshape(N, 1)
             negative_samples = sim[self.mask].reshape(N, -1)
 
