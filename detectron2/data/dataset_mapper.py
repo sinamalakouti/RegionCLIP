@@ -340,7 +340,7 @@ class DatasetMapper_original:
         aug_input = T.AugInput(image, sem_seg=sem_seg_gt)
         transforms = self.augmentations(aug_input)
 
-        image, sem_seg_gt = .image, aug_input.sem_seg
+        image, sem_seg_gt = aug_input.image, aug_input.sem_seg
 
         image_shape = image.shape[:2]  # h, w
         # Pytorch's dataloader is efficient on torch.Tensor due to shared-memory,
