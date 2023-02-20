@@ -245,10 +245,10 @@ class GeneralizedRCNN(nn.Module):
             #     print(student_features.shape)
             #     print(teacher_features.shape)
             #     print(self.training)
-            sim = (z @ z.t()) / 1
+            sim = (z @ z.t()) / 0.07
 
-            sim_i_j = torch.diag(sim, batch_size * 1)
-            sim_j_i = torch.diag(sim, -batch_size* world_size)
+            sim_i_j = torch.diag(sim, batch_size * world_size)
+            sim_j_i = torch.diag(sim, -batch_size * world_size)
             self.mask = self.mask_correlated_samples(batch_size,world_size)
             positive_samples = torch.cat((sim_i_j, sim_j_i), dim=0).reshape(N, 1)
             negative_samples = sim[self.mask].reshape(N, -1)
