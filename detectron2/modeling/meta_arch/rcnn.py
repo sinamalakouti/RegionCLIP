@@ -20,13 +20,49 @@ from ..proposal_generator import build_proposal_generator
 from ..roi_heads import build_roi_heads
 from .build import META_ARCH_REGISTRY
 from ..backbone.clipcap.clipcap import unsupervised_loss, unsupervised_feature_loss, generate_feature_caption, \
-    generate_first_feature_lang, ClipCaptionModel
+    generate_first_feature_lang
 
 from ..backbone.clipcap.gather import GatherLayer
 
 __all__ = ["GeneralizedRCNN", "ProposalNetwork"]
 
 from torchvision.transforms import Resize
+
+
+class FCDiscriminator_img(nn.Module):
+    def __init__(self, num_classes, ndf1=256, ndf2=128):
+        super(FCDiscriminator_img, self).__init__()
+
+        self.conv1 = nn.Conv2d(num_classes, ndf1, kernel_size=3, padding=1)
+        self.conv2 = nn.Conv2d(ndf1, ndf2, kernel_size=3, padding=1)
+        self.conv3 = nn.Conv2d(ndf2, ndf2, kernel_size=3, padding=1)
+        self.classifier = nn.Conv2d(ndf2, 1, kernel_size=3, padding=1)
+
+        self.leaky_relu = nn.LeakyReLU(negative_slope=0.2, inplace=True)
+
+    def forward(self, x):
+        x = self.conv1(x)
+        x = self.leaky_relu(x)
+        x = self.conv2(x)
+        x = self.leaky_relu(x)
+        x = self.conv3(x)
+        x = self.leaky_relu(x)
+        x = self.classifier(x)
+        return
+
+
+class GradReverse(torch.autograd.Function):
+    @staticmethod
+    def forward(ctx, x):
+        return x.view_as(x)
+
+    @staticmethod
+    def backward(ctx, grad_output):
+        return grad_output.neg()
+
+
+def grad_reverse(x):
+    return GradReverse.apply(x)
 
 
 @META_ARCH_REGISTRY.register()
@@ -85,19 +121,10 @@ class GeneralizedRCNN(nn.Module):
         self.use_clip_c4 = use_clip_c4  # if True, use C4 mode where roi_head uses the last resnet layer from backbone
         self.use_clip_attpool = use_clip_attpool  # if True (C4+text_emb_as_classifier), use att_pool to replace default mean pool
 
-        clipcap_model = ClipCaptionModel(40, 40)
-        # p = torch.load('/Users/sinamalakouti/Desktop/test-regionclip/transformer_weights_r50.pt', 'cpu')
-        p = torch.load('/projects/sina/RegionCLIP/pretrained_ckpt/transformer_weights_r50.pt', 'cpu')
-        clipcap_model.load_state_dict(p)
-        self.gpt_embedding_size = clipcap_model.gpt.transformer.wte.weight.shape[1]
-        self.clipcap_model = clipcap_model.clip_project
-        # self.clipcap_model.lm_head = self.clipcap_model.gpt.lm_head
-        # self.clipcap_model.gpt.lm_head = Identity()
-        # self.clipcap_model.eval()
-        # for p in self.clipcap_model.parameters():
-        #     p.requires_grad = False
-
-
+        self.D_img = FCDiscriminator_img(self.backbone._out_feature_channels['res4'])
+        # self.clipcap_model = ClipCaptionModel(40, 40)
+        # p = torch.load('/Users/sinamalakouti/Desktop/test-regionclip/transformer_weights.pt', 'cpu')
+        # self.clipcap_model.load_state_dict(p)
 
     @classmethod
     def from_config(cls, cfg):
@@ -172,6 +199,26 @@ class GeneralizedRCNN(nn.Module):
         # print(images_t.tensor.shape)
         return images, images_t
 
+
+    def preprocess_image_train_domain(self, batched_inputs: List[Dict[str, torch.Tensor]]):
+        """
+        Normalize, pad and batch the input images.
+        """
+        images = [x["image"].to(self.device) for x in batched_inputs]
+        images = [(x - self.pixel_mean) / self.pixel_std for x in images]
+        images = ImageList.from_tensors(images, self.backbone.size_divisibility)
+
+        images_t = [x["image_trgt"].to(self.device) for x in batched_inputs]
+        images_t = [(x - self.pixel_mean) / self.pixel_std for x in images_t]
+        images_t = ImageList.from_tensors(images_t, self.backbone.size_divisibility)
+
+        # resizer = Resize((224, 224))
+        # images = resizer(images.tensor)
+        # images_t = resizer(images_t.tensor)
+        # print(images.shape)
+        # print(images_t.tensor.shape)
+        return imagesr, images_t
+
     def mask_correlated_samples(self, batch_size, world_size):
         N = 2 * batch_size * world_size
         mask = torch.ones((N, N), dtype=bool)
@@ -207,24 +254,43 @@ class GeneralizedRCNN(nn.Module):
         torch.cuda.empty_cache()
         if not self.training:
             return self.inference(batched_inputs)
+
+        if branch == 'domain':
+            source_label = 0
+            target_label = 1
+            images_src, images_target = self.preprocess_image_train_domain(batched_inputs)
+            features = self.backbone(images_src.tensor)
+            features_s = grad_reverse(features['res4'])
+            D_img_out_s = self.D_img(features_s)
+            loss_D_img_s = F.binary_cross_entropy_with_logits(D_img_out_s,
+                                                              torch.FloatTensor(D_img_out_s.data.size()).fill_(
+                                                                  source_label).to(self.device))
+
+            features_t_orig = self.backbone(images_target.tensor)
+            features_t = grad_reverse(features_t_orig['res4'])
+            D_img_out_t = self.D_img(features_t)
+            loss_D_img_t = F.binary_cross_entropy_with_logits(D_img_out_t,
+                                                             torch.FloatTensor(D_img_out_t.data.size()).fill_(
+                                                                 target_label).to(self.device))
+            losses = {}
+            losses["loss_D_img_s"] = loss_D_img_s   * 0.01
+            losses["loss_D_img_t"] = loss_D_img_t    * 0.01
+            return losses
         if branch == 'caption_consistency':
             images_src, images_target = self.preprocess_image_train(batched_inputs)
 
-            if images_src.shape != images_target.shape:
-                print("gooz11")
-                print(images_src.shape)
-                print(images_target.shape)
-                print(self.training)
+
+
 
 
             prefix_src = self.backbone.attnpool(self.backbone(images_src)['res5'])
-            teacher_features = generate_first_feature_lang(prefix_src, self.clipcap_model.to(self.device), 40, self.gpt_embedding_size)
+            teacher_features = generate_first_feature_lang(prefix_src, clipcap_model.to(self.device), 40)
             # print("shape")
             # print(teacher_features.shape)
             # teacher_features = torch.stack(teacher_features, 0)
 
             prefix_trgt = self.backbone.attnpool(self.backbone(images_target)['res5'])
-            student_features = generate_first_feature_lang(prefix_trgt, self.clipcap_model.to(self.device), 40, self.gpt_embedding_size)
+            student_features = generate_first_feature_lang(prefix_trgt, clipcap_model.to(self.device), 40)
             # student_features = torch.stack(student_features, 0)
 
             # loss, captions = unsupervised_loss(prefix_src, prefix_trgt, clipcap_model.to(self.device), 40)
@@ -243,7 +309,7 @@ class GeneralizedRCNN(nn.Module):
             teacher_features = (teacher_features / teacher_features.norm(dim=1, keepdim=True))
             student_features = student_features / student_features.norm(dim=1, keepdim=True)
 
-            batch_size = 3
+            batch_size = 4
             world_size = 3
             N = 2 * batch_size * world_size
 
