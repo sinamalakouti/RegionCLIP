@@ -20,7 +20,7 @@ from ..proposal_generator import build_proposal_generator
 from ..roi_heads import build_roi_heads
 from .build import META_ARCH_REGISTRY
 from ..backbone.clipcap.clipcap import unsupervised_loss, unsupervised_feature_loss, generate_feature_caption, \
-    generate_first_feature_lang
+    generate_first_feature_lang, ClipCaptionModel
 
 from ..backbone.clipcap.gather import GatherLayer
 
@@ -85,9 +85,18 @@ class GeneralizedRCNN(nn.Module):
         self.use_clip_c4 = use_clip_c4  # if True, use C4 mode where roi_head uses the last resnet layer from backbone
         self.use_clip_attpool = use_clip_attpool  # if True (C4+text_emb_as_classifier), use att_pool to replace default mean pool
 
-        # self.clipcap_model = ClipCaptionModel(40, 40)
-        # p = torch.load('/Users/sinamalakouti/Desktop/test-regionclip/transformer_weights.pt', 'cpu')
-        # self.clipcap_model.load_state_dict(p)
+        clipcap_model = ClipCaptionModel(40, 40)
+        # p = torch.load('/Users/sinamalakouti/Desktop/test-regionclip/transformer_weights_r50.pt', 'cpu')
+        p = torch.load('/projects/sina/RegionCLIP/pretrained_ckpt/transformer_weights_r50.pt', 'cpu')
+        clipcap_model.load_state_dict(p)
+        self.clipcap_model = clipcap_model.clip_project
+        # self.clipcap_model.lm_head = self.clipcap_model.gpt.lm_head
+        # self.clipcap_model.gpt.lm_head = Identity()
+        # self.clipcap_model.eval()
+        # for p in self.clipcap_model.parameters():
+        #     p.requires_grad = False
+
+
 
     @classmethod
     def from_config(cls, cfg):
@@ -208,13 +217,13 @@ class GeneralizedRCNN(nn.Module):
 
 
             prefix_src = self.backbone.attnpool(self.backbone(images_src)['res5'])
-            teacher_features = generate_first_feature_lang(prefix_src, clipcap_model.to(self.device), 40)
+            teacher_features = generate_first_feature_lang(prefix_src, self.clipcap_model.to(self.device), 40)
             # print("shape")
             # print(teacher_features.shape)
             # teacher_features = torch.stack(teacher_features, 0)
 
             prefix_trgt = self.backbone.attnpool(self.backbone(images_target)['res5'])
-            student_features = generate_first_feature_lang(prefix_trgt, clipcap_model.to(self.device), 40)
+            student_features = generate_first_feature_lang(prefix_trgt, self.clipcap_model.to(self.device), 40)
             # student_features = torch.stack(student_features, 0)
 
             # loss, captions = unsupervised_loss(prefix_src, prefix_trgt, clipcap_model.to(self.device), 40)
