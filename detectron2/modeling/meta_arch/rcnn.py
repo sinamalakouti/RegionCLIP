@@ -29,7 +29,7 @@ __all__ = ["GeneralizedRCNN", "ProposalNetwork"]
 from torchvision.transforms import Resize, RandomCrop
 
 class ProjectionHead(nn.Module):
-    def __init__(self, feature_dim=30720, proj_dim=128):
+    def __init__(self, feature_dim=768, proj_dim=128):
         super(ProjectionHead, self).__init__()
         self.projection = nn.Sequential(
             nn.Linear(feature_dim, feature_dim),
@@ -312,7 +312,7 @@ class GeneralizedRCNN(nn.Module):
             prefix_trgt = self.backbone.attnpool(self.backbone(images_target)['res5'])
             student_features = generate_first_feature_caption(prefix_trgt, clipcap_model.to(self.device), 40)
             student_features = torch.stack(student_features, 0)
-            
+
             student_features = self.project_head(student_features)
             teacher_features = self.project_head(teacher_features)
 
