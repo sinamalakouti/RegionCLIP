@@ -28,6 +28,21 @@ __all__ = ["GeneralizedRCNN", "ProposalNetwork"]
 
 from torchvision.transforms import Resize, RandomCrop
 
+class ProjectionHead(nn.Module):
+    def __init__(self, feature_dim=30720, proj_dim=256):
+        super(ProjectionHead, self).__init__()
+        self.projection = nn.Sequential(
+            nn.Linear(feature_dim, feature_dim),
+            nn.BatchNorm1d(feature_dim),
+            nn.ReLU(inplace=True),
+            nn.Linear(feature_dim, proj_dim)
+        )
+
+    def forward(self, x):
+        x = self.projection(x)
+        return x
+
+
 
 class FCDiscriminator_img(nn.Module):
     def __init__(self, num_classes, ndf1=256, ndf2=128):
@@ -125,6 +140,8 @@ class GeneralizedRCNN(nn.Module):
         # self.clipcap_model = ClipCaptionModel(40, 40)
         # p = torch.load('/Users/sinamalakouti/Desktop/test-regionclip/transformer_weights.pt', 'cpu')
         # self.clipcap_model.load_state_dict(p)
+
+        self.project_head = ProjectionHead()
 
     @classmethod
     def from_config(cls, cfg):
@@ -294,6 +311,8 @@ class GeneralizedRCNN(nn.Module):
 
             prefix_trgt = self.backbone.attnpool(self.backbone(images_target)['res5'])
             student_features = generate_first_feature_lang(prefix_trgt, clipcap_model.to(self.device), 40)
+            student_features = self.project_head(student_features)
+            teach_head = self.project_head(teacher_features)
             # student_features = torch.stack(student_features, 0)
 
             # loss, captions = unsupervised_loss(prefix_src, prefix_trgt, clipcap_model.to(self.device), 40)
