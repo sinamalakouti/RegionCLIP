@@ -221,8 +221,8 @@ class GeneralizedRCNN(nn.Module):
             # teacher_features = teacher_features.squeeze(1)
             # student_features = student_features.squeeze(1)
 
-            teacher_features = prefix_src
-            student_features = prefix_trgt
+            # teacher_features = prefix_src
+            # student_features = prefix_trgt
             del images_src
             # del prefix_src
             del images_target
