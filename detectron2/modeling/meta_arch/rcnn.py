@@ -29,7 +29,7 @@ __all__ = ["GeneralizedRCNN", "ProposalNetwork"]
 from torchvision.transforms import Resize, RandomCrop
 
 class ProjectionHead(nn.Module):
-    def __init__(self, feature_dim=30720, proj_dim=256):
+    def __init__(self, feature_dim=30720, proj_dim=128):
         super(ProjectionHead, self).__init__()
         self.projection = nn.Sequential(
             nn.Linear(feature_dim, feature_dim),
