@@ -26,7 +26,7 @@ from ..backbone.clipcap.gather import GatherLayer
 
 __all__ = ["GeneralizedRCNN", "ProposalNetwork"]
 
-from torchvision.transforms import Resize
+from torchvision.transforms import Resize, RandomCrop
 
 
 class FCDiscriminator_img(nn.Module):
@@ -192,7 +192,7 @@ class GeneralizedRCNN(nn.Module):
         images_t = [(x - self.pixel_mean) / self.pixel_std for x in images_t]
         images_t = ImageList.from_tensors(images_t, self.backbone.size_divisibility)
 
-        resizer = Resize((224, 224))
+        resizer = RandomCrop((224, 224))
         images = resizer(images.tensor)
         images_t = resizer(images_t.tensor)
         # print(images.shape)
