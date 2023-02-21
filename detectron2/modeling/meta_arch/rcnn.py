@@ -260,8 +260,12 @@ class GeneralizedRCNN(nn.Module):
             target_label = 1
             images_src, images_target = self.preprocess_image_train_domain(batched_inputs)
             features = self.backbone(images_src.tensor)
+            print("hereeeee rcnn")
+            print(features.keys())
             features_s = grad_reverse(features['res4'])
+            print(features_s.shape)
             D_img_out_s = self.D_img(features_s)
+            print(D_img_out_s)
             loss_D_img_s = F.binary_cross_entropy_with_logits(D_img_out_s,
                                                               torch.FloatTensor(D_img_out_s.shape).fill_(
                                                                   source_label).to(self.device))
