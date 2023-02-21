@@ -262,7 +262,7 @@ class GeneralizedRCNN(nn.Module):
             features = self.backbone(images_src.tensor)
 
             features_s = grad_reverse(features['res4'])
-            
+
             D_img_out_s = self.D_img(features_s)
 
             loss_D_img_s = F.binary_cross_entropy_with_logits(D_img_out_s,
@@ -276,8 +276,8 @@ class GeneralizedRCNN(nn.Module):
                                                              torch.FloatTensor(D_img_out_t.data.size()).fill_(
                                                                  target_label).to(self.device))
             losses = {}
-            losses["loss_D_img_s"] = loss_D_img_s   * 0.01
-            losses["loss_D_img_t"] = loss_D_img_t    * 0.01
+            losses["loss_D_img_s"] = loss_D_img_s   * 0.001
+            losses["loss_D_img_t"] = loss_D_img_t    * 0.001
             return losses
         if branch == 'caption_consistency':
             images_src, images_target = self.preprocess_image_train(batched_inputs)
