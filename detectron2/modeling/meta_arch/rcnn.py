@@ -263,14 +263,14 @@ class GeneralizedRCNN(nn.Module):
             features_s = grad_reverse(features['res4'])
             D_img_out_s = self.D_img(features_s)
             loss_D_img_s = F.binary_cross_entropy_with_logits(D_img_out_s,
-                                                              torch.FloatTensor(D_img_out_s.data.size()).fill_(
+                                                              torch.FloatTensor(D_img_out_s.shape).fill_(
                                                                   source_label).to(self.device))
 
             features_t_orig = self.backbone(images_target.tensor)
             features_t = grad_reverse(features_t_orig['res4'])
             D_img_out_t = self.D_img(features_t)
             loss_D_img_t = F.binary_cross_entropy_with_logits(D_img_out_t,
-                                                             torch.FloatTensor(D_img_out_t.data.size()).fill_(
+                                                             torch.FloatTensor(D_img_out_t.shape()).fill_(
                                                                  target_label).to(self.device))
             losses = {}
             losses["loss_D_img_s"] = loss_D_img_s   * 0.01
