@@ -20,7 +20,7 @@ from ..proposal_generator import build_proposal_generator
 from ..roi_heads import build_roi_heads
 from .build import META_ARCH_REGISTRY
 from ..backbone.clipcap.clipcap import unsupervised_loss, unsupervised_feature_loss, generate_feature_caption, \
-    generate_first_feature_lang
+    generate_first_feature_lang, generate_first_feature_caption
 
 from ..backbone.clipcap.gather import GatherLayer
 
@@ -304,13 +304,13 @@ class GeneralizedRCNN(nn.Module):
 
 
             prefix_src = self.backbone.attnpool(self.backbone(images_src)['res5'])
-            teacher_features = generate_first_feature_lang(prefix_src, clipcap_model.to(self.device), 40)
+            teacher_features = generate_first_feature_caption(prefix_src, clipcap_model.to(self.device), 40)
             # print("shape")
             # print(teacher_features.shape)
             # teacher_features = torch.stack(teacher_features, 0)
 
             prefix_trgt = self.backbone.attnpool(self.backbone(images_target)['res5'])
-            student_features = generate_first_feature_lang(prefix_trgt, clipcap_model.to(self.device), 40)
+            student_features = generate_first_feature_caption(prefix_trgt, clipcap_model.to(self.device), 40)
             student_features = self.project_head(student_features)
             teacher_features = self.project_head(teacher_features)
             # student_features = torch.stack(student_features, 0)
