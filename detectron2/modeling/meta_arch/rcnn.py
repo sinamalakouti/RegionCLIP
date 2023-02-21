@@ -370,6 +370,22 @@ class GeneralizedRCNN(nn.Module):
                 self.visualize_training(batched_inputs, proposals)
 
         losses = {}
+
+        source_label = 0
+
+        features = self.backbone(images.tensor)
+
+        features_s = grad_reverse(features['res4'])
+
+        D_img_out_s = self.D_img(features_s)
+
+        loss_D_img_s = F.binary_cross_entropy_with_logits(D_img_out_s,
+                                                          torch.FloatTensor(D_img_out_s.data.size()).fill_(
+                                                              source_label).to(self.device))
+
+        losses = {}
+        losses["loss_D_img_s"] = loss_D_img_s * 0.001
+
         losses.update(detector_losses)
         losses.update(proposal_losses)
         return losses
