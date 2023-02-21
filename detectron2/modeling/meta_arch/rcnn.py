@@ -209,7 +209,7 @@ class GeneralizedRCNN(nn.Module):
 
             prefix_src = self.backbone.attnpool(self.backbone(images_src)['res5'])
             teacher_features = generate_first_feature_lang(prefix_src, clipcap_model.to(self.device), 40)
-            print("shape")
+            # print("shape")
             print(teacher_features.shape)
             # teacher_features = torch.stack(teacher_features, 0)
 
