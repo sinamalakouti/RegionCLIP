@@ -89,6 +89,7 @@ class GeneralizedRCNN(nn.Module):
         # p = torch.load('/Users/sinamalakouti/Desktop/test-regionclip/transformer_weights_r50.pt', 'cpu')
         p = torch.load('/projects/sina/RegionCLIP/pretrained_ckpt/transformer_weights_r50.pt', 'cpu')
         clipcap_model.load_state_dict(p)
+        self.gpt_embedding_size = clipcap_model.gpt.transformer.wte.weight.shape[1]
         self.clipcap_model = clipcap_model.clip_project
         # self.clipcap_model.lm_head = self.clipcap_model.gpt.lm_head
         # self.clipcap_model.gpt.lm_head = Identity()
@@ -217,13 +218,13 @@ class GeneralizedRCNN(nn.Module):
 
 
             prefix_src = self.backbone.attnpool(self.backbone(images_src)['res5'])
-            teacher_features = generate_first_feature_lang(prefix_src, self.clipcap_model.to(self.device), 40)
+            teacher_features = generate_first_feature_lang(prefix_src, self.clipcap_model.to(self.device), 40, self.gpt_embedding_size)
             # print("shape")
             # print(teacher_features.shape)
             # teacher_features = torch.stack(teacher_features, 0)
 
             prefix_trgt = self.backbone.attnpool(self.backbone(images_target)['res5'])
-            student_features = generate_first_feature_lang(prefix_trgt, self.clipcap_model.to(self.device), 40)
+            student_features = generate_first_feature_lang(prefix_trgt, self.clipcap_model.to(self.device), 40, self.gpt_embedding_size)
             # student_features = torch.stack(student_features, 0)
 
             # loss, captions = unsupervised_loss(prefix_src, prefix_trgt, clipcap_model.to(self.device), 40)

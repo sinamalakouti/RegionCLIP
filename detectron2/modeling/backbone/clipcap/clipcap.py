@@ -545,7 +545,7 @@ def generate_feature_caption(prefix, model: ClipCaptionModel, prefix_length=10):
     return res
 
 
-def generate_first_feature_caption(prefix, model: ClipCaptionModel, prefix_length=10):
+def generate_first_feature_caption(prefix, model: ClipCaptionModel, prefix_length=10, ):
     gpt_embedding_size = model.gpt.transformer.wte.weight.shape[1]
 
     embed = model.clip_project(prefix).view(-1, prefix_length, gpt_embedding_size)
@@ -604,8 +604,8 @@ def generate_first_feature_caption(prefix, model: ClipCaptionModel, prefix_lengt
 
     return res
 
-def generate_first_feature_lang(prefix, model: ClipCaptionModel, prefix_length=10):
-    gpt_embedding_size = model.gpt.transformer.wte.weight.shape[1]
+def generate_first_feature_lang(prefix, model: ClipCaptionModel, prefix_length=10, gpt_embedding_size=0):
+
 
     embed = model.clip_project(prefix).view(-1, prefix_length, gpt_embedding_size)
 
