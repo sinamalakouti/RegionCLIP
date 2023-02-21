@@ -607,6 +607,6 @@ def generate_first_feature_caption(prefix, model: ClipCaptionModel, prefix_lengt
 def generate_first_feature_lang(prefix, model: ClipCaptionModel, prefix_length=10, gpt_embedding_size=0):
 
 
-    embed = model.clip_project(prefix).view(-1, prefix_length, gpt_embedding_size)
+    embed = model(prefix).view(-1, prefix_length, gpt_embedding_size)
 
     return embed.view(embed.shape[0], -1)
