@@ -39,6 +39,8 @@ class ProjectionHead(nn.Module):
         )
 
     def forward(self, x):
+        print("project")
+        print(x.shape)
         x = self.projection(x)
         return x
 
