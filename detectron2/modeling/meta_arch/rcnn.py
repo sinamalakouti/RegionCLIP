@@ -243,7 +243,7 @@ class GeneralizedRCNN(nn.Module):
             teacher_features = (teacher_features / teacher_features.norm(dim=1, keepdim=True))
             student_features = student_features / student_features.norm(dim=1, keepdim=True)
 
-            batch_size = 4
+            batch_size = 3
             world_size = 3
             N = 2 * batch_size * world_size
 
