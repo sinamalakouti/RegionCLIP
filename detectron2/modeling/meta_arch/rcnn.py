@@ -217,7 +217,7 @@ class GeneralizedRCNN(nn.Module):
         # images_t = resizer(images_t.tensor)
         # print(images.shape)
         # print(images_t.tensor.shape)
-        return imagesr, images_t
+        return images, images_t
 
     def mask_correlated_samples(self, batch_size, world_size):
         N = 2 * batch_size * world_size
@@ -309,7 +309,7 @@ class GeneralizedRCNN(nn.Module):
             teacher_features = (teacher_features / teacher_features.norm(dim=1, keepdim=True))
             student_features = student_features / student_features.norm(dim=1, keepdim=True)
 
-            batch_size = 4
+            batch_size = 3
             world_size = 3
             N = 2 * batch_size * world_size
 
