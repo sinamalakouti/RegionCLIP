@@ -315,6 +315,8 @@ class GeneralizedRCNN(nn.Module):
             student_features = generate_first_feature_caption(prefix_trgt, clipcap_model.to(self.device), 40)
             student_features = torch.stack(student_features, 0)
 
+            teacher_features = teacher_features.squeeze(1)
+            student_features = student_features.squeeze(1)
             student_features = self.project_head(student_features)
             teacher_features = self.project_head(teacher_features)
 
@@ -322,8 +324,7 @@ class GeneralizedRCNN(nn.Module):
             # loss, captions = unsupervised_loss(prefix_src, prefix_trgt, clipcap_model.to(self.device), 40)
             # loss, captions = unsupervised_feature_loss(prefix_src, prefix_trgt, clipcap_model.to(self.device), 40)
             # tec
-            # teacher_features = teacher_features.squeeze(1)
-            # student_features = student_features.squeeze(1)
+
 
             # teacher_features = prefix_src
             # student_features = prefix_trgt
