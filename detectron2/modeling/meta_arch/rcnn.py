@@ -302,25 +302,18 @@ class GeneralizedRCNN(nn.Module):
 
             prefix_src = self.backbone.attnpool(self.backbone(images_src)['res5'])
             teacher_features = generate_first_feature_caption(prefix_src, clipcap_model.to(self.device), 40)
-            # print("shape")
-            # print(teacher_features.shape)
             teacher_features = torch.stack(teacher_features, 0)
 
             prefix_trgt = self.backbone.attnpool(self.backbone(images_target)['res5'])
             student_features = generate_first_feature_caption(prefix_trgt, clipcap_model.to(self.device), 40)
             student_features = torch.stack(student_features, 0)
 
-            teacher_features = teacher_features.squeeze(1)
-            student_features = student_features.squeeze(1)
-            # student_features = self.project_head(student_features)
-            # teacher_features = self.project_head(teacher_features)
-
             # loss, captions = unsupervised_loss(prefix_src, prefix_trgt, clipcap_model.to(self.device), 40)
             # loss, captions = unsupervised_feature_loss(prefix_src, prefix_trgt, clipcap_model.to(self.device), 40)
-            # tec
 
-            # teacher_features = prefix_src
-            # student_features = prefix_trgt
+            teacher_features = teacher_features.squeeze(1)
+            student_features = student_features.squeeze(1)
+
             del images_src
             # del prefix_src
             del images_target
@@ -329,13 +322,7 @@ class GeneralizedRCNN(nn.Module):
             teacher_features = (teacher_features / teacher_features.norm(dim=1, keepdim=True))
             student_features = student_features / student_features.norm(dim=1, keepdim=True)
 
-            batch_size = 4
-            world_size = 4
-            N = 2 * batch_size * world_size
 
-            if world_size > 1:
-                teacher_features = torch.cat(GatherLayer.apply(teacher_features), dim=0)
-                student_features = torch.cat(GatherLayer.apply(student_features), dim=0)
 
             # all together: both types of negatives
             #             z = torch.cat((teacher_features, student_features), dim=0)
@@ -357,7 +344,7 @@ class GeneralizedRCNN(nn.Module):
 
             labels = torch.arange(len(teacher_features), dtype=torch.long, device=teacher_features.device)
             logit_scale = self.logit_scale.exp()
-            logits = teacher_features @ student_features.t() * logit_scale
+            logits = student_features @ teacher_features.t() * logit_scale
             criterion = nn.CrossEntropyLoss()
             loss = criterion(logits, labels)
 
