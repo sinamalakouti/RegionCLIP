@@ -211,7 +211,7 @@ class GeneralizedRCNN(nn.Module):
         images_t = [(x - self.pixel_mean) / self.pixel_std for x in images_t]
         images_t = ImageList.from_tensors(images_t, self.backbone.size_divisibility)
 
-        resizer = RandomCrop((224, 224))
+        resizer = Resize((224, 224))
         images = resizer(images.tensor)
         images_t = resizer(images_t.tensor)
         # print(images.shape)
