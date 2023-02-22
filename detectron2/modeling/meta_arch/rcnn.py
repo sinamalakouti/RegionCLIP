@@ -28,6 +28,7 @@ __all__ = ["GeneralizedRCNN", "ProposalNetwork"]
 
 from torchvision.transforms import Resize, RandomCrop
 
+
 class ProjectionHead(nn.Module):
     def __init__(self, feature_dim=768, proj_dim=128):
         super(ProjectionHead, self).__init__()
@@ -41,7 +42,6 @@ class ProjectionHead(nn.Module):
     def forward(self, x):
         x = self.projection(x)
         return x
-
 
 
 class FCDiscriminator_img(nn.Module):
@@ -136,12 +136,14 @@ class GeneralizedRCNN(nn.Module):
         self.use_clip_c4 = use_clip_c4  # if True, use C4 mode where roi_head uses the last resnet layer from backbone
         self.use_clip_attpool = use_clip_attpool  # if True (C4+text_emb_as_classifier), use att_pool to replace default mean pool
 
-        self.D_img = FCDiscriminator_img(self.backbone._out_feature_channels['res4'])
+        # self.D_img = FCDiscriminator_img(self.backbone._out_feature_channels['res4'])
         # self.clipcap_model = ClipCaptionModel(40, 40)
         # p = torch.load('/Users/sinamalakouti/Desktop/test-regionclip/transformer_weights.pt', 'cpu')
         # self.clipcap_model.load_state_dict(p)
 
-        self.project_head = ProjectionHead()
+        # self.project_head = ProjectionHead()
+
+        self.logit_scale = nn.Parameter(torch.ones([]) * np.log(1 / 0.07))
 
     @classmethod
     def from_config(cls, cfg):
@@ -216,7 +218,6 @@ class GeneralizedRCNN(nn.Module):
         # print(images_t.tensor.shape)
         return images, images_t
 
-
     def preprocess_image_train_domain(self, batched_inputs: List[Dict[str, torch.Tensor]]):
         """
         Normalize, pad and batch the input images.
@@ -290,18 +291,14 @@ class GeneralizedRCNN(nn.Module):
             features_t = grad_reverse(features_t_orig['res4'])
             D_img_out_t = self.D_img(features_t)
             loss_D_img_t = F.binary_cross_entropy_with_logits(D_img_out_t,
-                                                             torch.FloatTensor(D_img_out_t.data.size()).fill_(
-                                                                 target_label).to(self.device))
+                                                              torch.FloatTensor(D_img_out_t.data.size()).fill_(
+                                                                  target_label).to(self.device))
             losses = {}
-            losses["loss_D_img_s"] = loss_D_img_s   * 0.001
-            losses["loss_D_img_t"] = loss_D_img_t    * 0.001
+            losses["loss_D_img_s"] = loss_D_img_s * 0.001
+            losses["loss_D_img_t"] = loss_D_img_t * 0.001
             return losses
         if branch == 'caption_consistency':
             images_src, images_target = self.preprocess_image_train(batched_inputs)
-
-
-
-
 
             prefix_src = self.backbone.attnpool(self.backbone(images_src)['res5'])
             teacher_features = generate_first_feature_caption(prefix_src, clipcap_model.to(self.device), 40)
@@ -315,14 +312,12 @@ class GeneralizedRCNN(nn.Module):
 
             teacher_features = teacher_features.squeeze(1)
             student_features = student_features.squeeze(1)
-            student_features = self.project_head(student_features)
-            teacher_features = self.project_head(teacher_features)
-
+            # student_features = self.project_head(student_features)
+            # teacher_features = self.project_head(teacher_features)
 
             # loss, captions = unsupervised_loss(prefix_src, prefix_trgt, clipcap_model.to(self.device), 40)
             # loss, captions = unsupervised_feature_loss(prefix_src, prefix_trgt, clipcap_model.to(self.device), 40)
             # tec
-
 
             # teacher_features = prefix_src
             # student_features = prefix_trgt
@@ -334,34 +329,39 @@ class GeneralizedRCNN(nn.Module):
             teacher_features = (teacher_features / teacher_features.norm(dim=1, keepdim=True))
             student_features = student_features / student_features.norm(dim=1, keepdim=True)
 
-            batch_size = 3
-            world_size = 3
+            batch_size = 4
+            world_size = 4
             N = 2 * batch_size * world_size
 
             if world_size > 1:
                 teacher_features = torch.cat(GatherLayer.apply(teacher_features), dim=0)
                 student_features = torch.cat(GatherLayer.apply(student_features), dim=0)
 
-            z = torch.cat((teacher_features, student_features), dim=0)
+            # all together: both types of negatives
+            #             z = torch.cat((teacher_features, student_features), dim=0)
             # if student_features.shape != teacher_features.shape:
             #     print("jizzzzzz")
             #     print(student_features.shape)
             #     print(teacher_features.shape)
             #     print(self.training)
-            sim = (z @ z.t()) / 0.07
+            # sim = (z @ z.t()) / 0.07
 
-            sim_i_j = torch.diag(sim, batch_size * world_size)
-            sim_j_i = torch.diag(sim, -batch_size * world_size)
-            self.mask = self.mask_correlated_samples(batch_size,world_size)
-            positive_samples = torch.cat((sim_i_j, sim_j_i), dim=0).reshape(N, 1)
-            negative_samples = sim[self.mask].reshape(N, -1)
+            # sim_i_j = torch.diag(sim, batch_size * world_size)
+            # sim_j_i = torch.diag(sim, -batch_size * world_size)
+            # self.mask = self.mask_correlated_samples(batch_size, world_size)
+            # positive_samples = torch.cat((sim_i_j, sim_j_i), dim=0).reshape(N, 1)
+            # negative_samples = sim[self.mask].reshape(N, -1)
 
-            labels = torch.zeros(N).to(positive_samples.device).long()
-            logits = torch.cat((positive_samples, negative_samples), dim=1)
-            criterion = nn.CrossEntropyLoss(reduction='sum')
+            # labels = torch.zeros(N).to(positive_samples.device).long()
+            # logits = torch.cat((positive_samples, negative_samples), dim=1)
+
+            labels = torch.arange(len(teacher_features), dtype=torch.long, device=teacher_features.device)
+            logit_scale = self.logit_scale.exp()
+            logits = teacher_features @ student_features.t() * logit_scale
+            criterion = nn.CrossEntropyLoss()
             loss = criterion(logits, labels)
 
-            return loss / N
+            return loss
 
         images = self.preprocess_image(batched_inputs)
         if "instances" in batched_inputs[0]:
