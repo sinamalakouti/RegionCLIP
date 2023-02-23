@@ -315,7 +315,9 @@ class SimpleTrainer(TrainerBase):
             caption_consistency_loss = self.model(data, clipcap_model=self.clipcap_model, branch='caption_consistency')
             loss['caption_consistency_loss'] = caption_consistency_loss * 0.0
         loss_dict.update(loss)
-
+        # if self.iter > 200:
+        #     domain_loss = self.model(data, clipcap_model=None, branch='domain')
+        #     loss_dict.update(domain_loss)
         if isinstance(loss_dict, torch.Tensor):
             losses = loss_dict
             loss_dict = {"total_loss": loss_dict}
@@ -328,6 +330,10 @@ class SimpleTrainer(TrainerBase):
         """
         self.optimizer.zero_grad()
         losses.backward()
+        report_loss = {}
+        for k in loss_dict.keys():
+            report_loss[k] = loss_dict[k].detach()
+        self._write_metrics(loss_dict, data_time)
 
         """
         If you need gradient clipping/scaling or other processing, you can
@@ -335,11 +341,6 @@ class SimpleTrainer(TrainerBase):
         suboptimal as explained in https://arxiv.org/abs/2006.15704 Sec 3.2.4
         """
         self.optimizer.step()
-
-        report_loss = {}
-        for k in loss_dict.keys():
-            report_loss[k] = loss_dict[k].detach()
-        self._write_metrics(loss_dict, data_time)
 
     def _write_metrics(
             self,
