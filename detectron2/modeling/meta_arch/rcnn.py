@@ -22,6 +22,8 @@ from .build import META_ARCH_REGISTRY
 from ..backbone.clipcap.clipcap import unsupervised_loss, unsupervised_feature_loss, generate_feature_caption, \
     generate_first_feature_caption
 
+
+from ..backbone.clipcap.gather import GatherLayer
 __all__ = ["GeneralizedRCNN", "ProposalNetwork"]
 
 from torchvision.transforms import Resize
@@ -211,6 +213,10 @@ class GeneralizedRCNN(nn.Module):
             # del prefix_src
             del images_target
             del batched_inputs
+
+            teacher_features = torch.cat(GatherLayer.apply(teacher_features), dim=0)
+            student_features = torch.cat(GatherLayer.apply(student_features), dim=0)
+
 
             teacher_features = (teacher_features / teacher_features.norm(dim=1, keepdim=True))
             student_features = student_features / student_features.norm(dim=1, keepdim=True)
