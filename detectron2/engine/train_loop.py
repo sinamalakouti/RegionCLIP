@@ -264,8 +264,8 @@ class SimpleTrainer(TrainerBase):
         self.model = model
 
         self.clipcap_model = ClipCaptionModel(40, 40)
-        # p = torch.load('/Users/sinamalakouti/Desktop/test-regionclip/transformer_weights_r50.pt', 'cpu')
-        p = torch.load('/projects/sina/RegionCLIP/pretrained_ckpt/transformer_weights_r50.pt', 'cpu')
+        p = torch.load('/Users/sinamalakouti/Desktop/test-regionclip/transformer_weights_r50.pt', 'cpu')
+        # p = torch.load('/proj[ects/sina/RegionCLIP/pretrained_ckpt/transformer_weights_r50.pt', 'cpu')
         self.clipcap_model.load_state_dict(p)
         # self.clipcap_model.lm_head = self.clipcap_model.gpt.lm_head
         # self.clipcap_model.gpt.lm_head = Identity()

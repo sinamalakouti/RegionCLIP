@@ -143,7 +143,7 @@ class GeneralizedRCNN(nn.Module):
 
         # self.project_head = ProjectionHead()
 
-        self.logit_scale = nn.Parameter(torch.ones([]) * np.log(1 / 0.07))
+        # self.logit_scale = nn.Parameter(torch.ones([]) * np.log(1 / 0.07))
 
     @classmethod
     def from_config(cls, cfg):
@@ -319,6 +319,9 @@ class GeneralizedRCNN(nn.Module):
             del images_target
             del batched_inputs
 
+            teacher_features = torch.cat(GatherLayer.apply(teacher_features), dim=0)
+            student_features = torch.cat(GatherLayer.apply(student_features), dim=0)
+
             teacher_features = (teacher_features / teacher_features.norm(dim=1, keepdim=True))
             student_features = student_features / student_features.norm(dim=1, keepdim=True)
 
@@ -343,8 +346,8 @@ class GeneralizedRCNN(nn.Module):
             # logits = torch.cat((positive_samples, negative_samples), dim=1)
 
             labels = torch.arange(len(teacher_features), dtype=torch.long, device=teacher_features.device)
-            logit_scale = self.logit_scale.exp()
-            logits = student_features @ teacher_features.t() * logit_scale
+            # logit_scale = self.logit_scale.exp()
+            logits = student_features @ teacher_features.t()
             criterion = nn.CrossEntropyLoss()
             loss = criterion(logits, labels)
 

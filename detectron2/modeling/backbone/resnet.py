@@ -449,6 +449,7 @@ class ResNet(Backbone):
             x = stage(x)
             if name in self._out_features:
                 outputs[name] = x
+
         if self.num_classes is not None:
             x = self.avgpool(x)
             x = torch.flatten(x, 1)
