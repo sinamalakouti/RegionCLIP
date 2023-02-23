@@ -28,7 +28,7 @@ class PascalVOCDetectionEvaluator(DatasetEvaluator):
     official API.
     """
 
-    def __init__(self, dataset_name,target_classnames=None):
+    def __init__(self, dataset_name, target_classnames=None):
         """
         Args:
             dataset_name (str): name of the dataset, e.g., "voc_2007_test"
@@ -120,10 +120,10 @@ class PascalVOCDetectionEvaluator(DatasetEvaluator):
         print('results')
         print(mAP)
         ret["bbox"] = {"AP": np.mean(list(mAP.values())), "AP50": mAP[50], "AP75": mAP[75]}
-        
+
         for idx, name in enumerate(self.target_classnames):
-                        ret["bbox"].update({"AP50-" + name: aps[50][idx]})
-        
+            ret["bbox"].update({"AP50-" + name: aps[50][idx]})
+
         print(ret['bbox'])
         return ret
 
@@ -282,9 +282,9 @@ def voc_eval(detpath, annopath, imagesetfile, classname, ovthresh=0.5, use_07_me
 
             # union
             uni = (
-                (bb[2] - bb[0] + 1.0) * (bb[3] - bb[1] + 1.0)
-                + (BBGT[:, 2] - BBGT[:, 0] + 1.0) * (BBGT[:, 3] - BBGT[:, 1] + 1.0)
-                - inters
+                    (bb[2] - bb[0] + 1.0) * (bb[3] - bb[1] + 1.0)
+                    + (BBGT[:, 2] - BBGT[:, 0] + 1.0) * (BBGT[:, 3] - BBGT[:, 1] + 1.0)
+                    - inters
             )
 
             overlaps = inters / uni
