@@ -36,19 +36,19 @@ class DatasetMapper:
 
     @configurable
     def __init__(
-        self,
-        is_train: bool,
-        *,
-        augmentations: List[Union[T.Augmentation, T.Transform]],
-        image_format: str,
-        use_instance_mask: bool = False,
-        use_keypoint: bool = False,
-        instance_mask_format: str = "polygon",
-        keypoint_hflip_indices: Optional[np.ndarray] = None,
-        precomputed_proposal_topk: Optional[int] = None,
-        recompute_boxes: bool = False,
-        filter_open_cls: bool = False,
-        clip_crop: bool = False,
+            self,
+            is_train: bool,
+            *,
+            augmentations: List[Union[T.Augmentation, T.Transform]],
+            image_format: str,
+            use_instance_mask: bool = False,
+            use_keypoint: bool = False,
+            instance_mask_format: str = "polygon",
+            keypoint_hflip_indices: Optional[np.ndarray] = None,
+            precomputed_proposal_topk: Optional[int] = None,
+            recompute_boxes: bool = False,
+            filter_open_cls: bool = False,
+            clip_crop: bool = False,
     ):
         """
         NOTE: this interface is experimental.
@@ -72,17 +72,17 @@ class DatasetMapper:
         if recompute_boxes:
             assert use_instance_mask, "recompute_boxes requires instance masks"
         # fmt: off
-        self.is_train               = is_train
-        self.augmentations          = T.AugmentationList(augmentations)
-        self.image_format           = image_format
-        self.use_instance_mask      = use_instance_mask
-        self.instance_mask_format   = instance_mask_format
-        self.use_keypoint           = use_keypoint
+        self.is_train = is_train
+        self.augmentations = T.AugmentationList(augmentations)
+        self.image_format = image_format
+        self.use_instance_mask = use_instance_mask
+        self.instance_mask_format = instance_mask_format
+        self.use_keypoint = use_keypoint
         self.keypoint_hflip_indices = keypoint_hflip_indices
-        self.proposal_topk          = precomputed_proposal_topk
-        self.recompute_boxes        = recompute_boxes
-        self.filter_open_cls        = filter_open_cls
-        self.clip_crop              = clip_crop
+        self.proposal_topk = precomputed_proposal_topk
+        self.recompute_boxes = recompute_boxes
+        self.filter_open_cls = filter_open_cls
+        self.clip_crop = clip_crop
         # fmt: on
         logger = logging.getLogger(__name__)
         mode = "training" if is_train else "inference"
@@ -131,10 +131,10 @@ class DatasetMapper:
         """
         dataset_dict = copy.deepcopy(dataset_dict)  # it will be modified by code below
         # USER: Write your own image loading if it's not from a file
-        
-        #print("hereeee")
-        #print(dataset_dict["file_name"])
-        #print(dataset_dict["clipart_dt_file_name"])
+
+        # print("hereeee")
+        # print(dataset_dict["file_name"])
+        # print(dataset_dict["clipart_dt_file_name"])
         image = utils.read_image(dataset_dict["file_name"], format=self.image_format)
         utils.check_image_size(dataset_dict, image)
         if "clipart_dt_file_name" in dataset_dict:
@@ -154,9 +154,9 @@ class DatasetMapper:
         transforms = self.augmentations(aug_input)
         image, sem_seg_gt = aug_input.image, aug_input.sem_seg
 
-        # if image_trgt is not None:
-        #     aug_input_trgt = T.AugInput(image_trgt, sem_seg=sem_seg_gt)
-        #     image_trgt =  transforms.apply_image(image_trgt)
+        if image_trgt is not None:
+            aug_input_trgt = T.AugInput(image_trgt, sem_seg=sem_seg_gt)
+            image_trgt = transforms.apply_image(image_trgt)
 
         image_shape = image.shape[:2]  # h, w
         # Pytorch's dataloader is efficient on torch.Tensor due to shared-memory,
@@ -214,6 +214,7 @@ class DatasetMapper:
             dataset_dict["instances"] = utils.filter_empty_instances(instances)
         return dataset_dict
 
+
 class DatasetMapper_original:
     """
     A callable which takes a dataset dict in Detectron2 Dataset format,
@@ -233,19 +234,19 @@ class DatasetMapper_original:
 
     @configurable
     def __init__(
-        self,
-        is_train: bool,
-        *,
-        augmentations: List[Union[T.Augmentation, T.Transform]],
-        image_format: str,
-        use_instance_mask: bool = False,
-        use_keypoint: bool = False,
-        instance_mask_format: str = "polygon",
-        keypoint_hflip_indices: Optional[np.ndarray] = None,
-        precomputed_proposal_topk: Optional[int] = None,
-        recompute_boxes: bool = False,
-        filter_open_cls: bool = False,
-        clip_crop: bool = False,
+            self,
+            is_train: bool,
+            *,
+            augmentations: List[Union[T.Augmentation, T.Transform]],
+            image_format: str,
+            use_instance_mask: bool = False,
+            use_keypoint: bool = False,
+            instance_mask_format: str = "polygon",
+            keypoint_hflip_indices: Optional[np.ndarray] = None,
+            precomputed_proposal_topk: Optional[int] = None,
+            recompute_boxes: bool = False,
+            filter_open_cls: bool = False,
+            clip_crop: bool = False,
     ):
         """
         NOTE: this interface is experimental.
@@ -269,17 +270,17 @@ class DatasetMapper_original:
         if recompute_boxes:
             assert use_instance_mask, "recompute_boxes requires instance masks"
         # fmt: off
-        self.is_train               = is_train
-        self.augmentations          = T.AugmentationList(augmentations)
-        self.image_format           = image_format
-        self.use_instance_mask      = use_instance_mask
-        self.instance_mask_format   = instance_mask_format
-        self.use_keypoint           = use_keypoint
+        self.is_train = is_train
+        self.augmentations = T.AugmentationList(augmentations)
+        self.image_format = image_format
+        self.use_instance_mask = use_instance_mask
+        self.instance_mask_format = instance_mask_format
+        self.use_keypoint = use_keypoint
         self.keypoint_hflip_indices = keypoint_hflip_indices
-        self.proposal_topk          = precomputed_proposal_topk
-        self.recompute_boxes        = recompute_boxes
-        self.filter_open_cls        = filter_open_cls
-        self.clip_crop              = clip_crop
+        self.proposal_topk = precomputed_proposal_topk
+        self.recompute_boxes = recompute_boxes
+        self.filter_open_cls = filter_open_cls
+        self.clip_crop = clip_crop
         # fmt: on
         logger = logging.getLogger(__name__)
         mode = "training" if is_train else "inference"
