@@ -308,13 +308,9 @@ class SimpleTrainer(TrainerBase):
         if self.iter >= 5000:
 
             caption_consistency_loss = self.model(data, clipcap_model=self.clipcap_model, branch='caption_consistency')
-<<<<<<< HEAD
             loss['caption_consistency_loss'] = caption_consistency_loss
 
 
-=======
-            loss['caption_consistency_loss'] = caption_consistency_loss * 0.1
->>>>>>> parent of a4d273f (Update train_loop.py)
         else:
             caption_consistency_loss = self.model(data, clipcap_model=self.clipcap_model, branch='caption_consistency')
             loss['caption_consistency_loss'] = caption_consistency_loss * 0.0
