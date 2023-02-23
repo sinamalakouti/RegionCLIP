@@ -264,8 +264,8 @@ class SimpleTrainer(TrainerBase):
         self.model = model
 
         self.clipcap_model = ClipCaptionModel(40, 40)
-        p = torch.load('/Users/sinamalakouti/Desktop/test-regionclip/transformer_weights_r50.pt', 'cpu')
-        # p = torch.load('/proj[ects/sina/RegionCLIP/pretrained_ckpt/transformer_weights_r50.pt', 'cpu')
+        # p = torch.load('/Users/sinamalakouti/Desktop/test-regionclip/transformer_weights_r50.pt', 'cpu')
+        p = torch.load('/projects/sina/RegionCLIP/pretrained_ckpt/transformer_weights_r50.pt', 'cpu')
         self.clipcap_model.load_state_dict(p)
         # self.clipcap_model.lm_head = self.clipcap_model.gpt.lm_head
         # self.clipcap_model.gpt.lm_head = Identity()
@@ -305,19 +305,14 @@ class SimpleTrainer(TrainerBase):
 
         loss_dict = self.model(data)
         loss = {}
-        if self.iter >= 5000:
+        if self.iter > 0:
 
             caption_consistency_loss = self.model(data, clipcap_model=self.clipcap_model, branch='caption_consistency')
             loss['caption_consistency_loss'] = caption_consistency_loss
-
-
         else:
             caption_consistency_loss = self.model(data, clipcap_model=self.clipcap_model, branch='caption_consistency')
             loss['caption_consistency_loss'] = caption_consistency_loss * 0.0
         loss_dict.update(loss)
-        # if self.iter > 200:
-        #     domain_loss = self.model(data, clipcap_model=None, branch='domain')
-        #     loss_dict.update(domain_loss)
         if isinstance(loss_dict, torch.Tensor):
             losses = loss_dict
             loss_dict = {"total_loss": loss_dict}
