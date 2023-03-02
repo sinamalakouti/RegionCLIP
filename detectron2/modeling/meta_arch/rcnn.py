@@ -143,16 +143,19 @@ class GeneralizedRCNN(nn.Module):
             storage.put_image(vis_name, vis_img)
             break  # only visualize one image in a batch
 
+
+
+
     def preprocess_image_train(self, batched_inputs: List[Dict[str, torch.Tensor]]):
         """
         Normalize, pad and batch the input images.
         """
         images = [x["image"].to(self.device) for x in batched_inputs]
-        images = [(x - self.pixel_mean) / self.pixel_std for x in images]
+        images = [(x/255.0 - self.pixel_mean) / self.pixel_std for x in images]
         images = ImageList.from_tensors(images, self.backbone.size_divisibility)
 
         images_t = [x["image_trgt"].to(self.device) for x in batched_inputs]
-        images_t = [(x - self.pixel_mean) / self.pixel_std for x in images_t]
+        images_t = [(x/255.0 - self.pixel_mean) / self.pixel_std for x in images_t]
         images_t = ImageList.from_tensors(images_t, self.backbone.size_divisibility)
 
         resizer = Resize((224, 224))
