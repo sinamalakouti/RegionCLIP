@@ -149,14 +149,14 @@ class DatasetMapper:
         else:
             sem_seg_gt = None
 
-        aug_input = T.AugInput(image, sem_seg=sem_seg_gt)
+        # aug_input = T.AugInput(image, sem_seg=sem_seg_gt)
 
-        transforms = self.augmentations(aug_input)
-        image, sem_seg_gt = aug_input.image, aug_input.sem_seg
-
+        # transforms = self.augmentations(aug_input)
+        # image, sem_seg_gt = aug_input.image, aug_input.sem_seg
+        #
         if image_trgt is not None:
             aug_input_trgt = T.AugInput(image_trgt, sem_seg=sem_seg_gt)
-            image_trgt = transforms.apply_image(image_trgt)
+            # image_trgt = transforms.apply_image(image_trgt)
 
         image_shape = image.shape[:2]  # h, w
         # Pytorch's dataloader is efficient on torch.Tensor due to shared-memory,
