@@ -156,14 +156,14 @@ class GeneralizedRCNN(nn.Module):
         preprocess2 = nn.Sequential(
             Resize(size=224, interpolation=InterpolationMode.BICUBIC, max_size=None, antialias=None),
             CenterCrop(size=(224, 224)),
-            Normalize(mean=self.pixel_mean, std=(0.26862954, 0.26130258, 0.27577711)))
+            Normalize(mean=self.pixel_mean, std=self.pixel_std))
 
 
-        images = [x["image"]/255.0.to(self.device) for x in batched_inputs]
+        images = [(x["image"]/255.0).to(self.device) for x in batched_inputs]
         images = ImageList.from_tensors(images, self.backbone.size_divisibility)
         images = preprocess2(images)
 
-        images_t = [x["image_trgt"].to(self.device) for x in batched_inputs]
+        images_t = [(x["image_trgt"]/255.0).to(self.device) for x in batched_inputs]
         images_t = ImageList.from_tensors(images_t, self.backbone.size_divisibility)
         images_t = preprocess2(images_t)
 
