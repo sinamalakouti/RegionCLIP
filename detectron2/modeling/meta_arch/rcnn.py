@@ -221,15 +221,16 @@ class GeneralizedRCNN(nn.Module):
                 model, preprocess = clip.load("RN50", device='cpu')
                 p_src = model.encode_image(images_src.cpu())
                 p_tgt = model.encode_image(images_target.cpu())
-                _, capsrc = generate_first_feature_caption(p_src, clipcap_model.to('cpu'), 40)
-                _, captrgt = generate_first_feature_caption(p_tgt, clipcap_model.to('cpu'), 40)
-                
+                _, clip_src = generate_first_feature_caption(p_src, clipcap_model.to('cpu'), 40)
+                _, clip_trgt = generate_first_feature_caption(p_tgt, clipcap_model.to('cpu'), 40)
+
                 storage = get_event_storage()
-                print("cap_src  ", capsrc)
-                print("cap_trgt ", captrgt)
+                print("cap_src  ", clip_src)
+                print("cap_trgt ", clip_trgt)
+
+                print("region_clip_src  ", capsrc)
+                print("region_clip_trgt  ", captrgt)
                 p = '/projects/sina/RegionCLIP/images/'
-
-
                 for i in range(len(images_src)):
                     save_image(images_src[i].cpu(), p + "img_src_iter_{}_img_{}.png".format(storage.iter, i))
                     save_image(images_target[i].cpu(), p + "img_trgt_iter_{}_img_{}.png".format(storage.iter, i))
