@@ -28,7 +28,7 @@ __all__ = ["GeneralizedRCNN", "ProposalNetwork"]
 
 from torchvision.transforms import Resize, CenterCrop
 
-from ...data.transforms.torchvision_transforms.functional import InterpolationMode
+from torchvision.transforms.functional import InterpolationMode
 from ...data.transforms.torchvision_transforms.transforms import Normalize
 
 
@@ -157,7 +157,6 @@ class GeneralizedRCNN(nn.Module):
             Resize(size=224, interpolation=InterpolationMode.BICUBIC, max_size=None, antialias=None),
             CenterCrop(size=(224, 224)),
             Normalize(mean=self.pixel_mean, std=self.pixel_std))
-
 
         images = [(x["image"]/255.0).to(self.device) for x in batched_inputs]
         images = ImageList.from_tensors(images, self.backbone.size_divisibility)
