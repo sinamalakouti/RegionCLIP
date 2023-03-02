@@ -159,15 +159,15 @@ class GeneralizedRCNN(nn.Module):
             Normalize(mean=self.pixel_mean, std=self.pixel_std))
 
         images = [(x["image"]/255.0).to(self.device) for x in batched_inputs]
-
-        images = preprocess2(images)
         images = ImageList.from_tensors(images, self.backbone.size_divisibility)
+        images = preprocess2(images.tensor)
 
         images_t = [(x["image_trgt"]/255.0).to(self.device) for x in batched_inputs]
-        images_t = preprocess2(images_t)
         images_t = ImageList.from_tensors(images_t, self.backbone.size_divisibility)
+        images_t = preprocess2(images_t.tensor)
 
-        return images.tensor, images_t.tensor
+
+        return images, images_t
 
     def forward(self, batched_inputs: List[Dict[str, torch.Tensor]], clipcap_model=None, branch='supervised'):
         """
