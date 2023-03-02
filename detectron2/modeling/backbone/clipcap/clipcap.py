@@ -612,7 +612,7 @@ def generate_first_feature_caption(prefix, model: ClipCaptionModel, prefix_lengt
         if out_features is not None:
             res.append(out_features[:, -1, :])
 
-    return res,  generated_list[0]
+    return res,  generated_list
 
 # def prompt_consistency_loss(images):
 #     classes = ['aeroplane', 'bird', 'bicycle', 'boat', 'bottle', 'bus', 'car', 'cat',
