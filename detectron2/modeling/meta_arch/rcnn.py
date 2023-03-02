@@ -217,10 +217,19 @@ class GeneralizedRCNN(nn.Module):
             # loss, captions = unsupervised_feature_loss(prefix_src, prefix_trgt, clipcap_model.to(self.device), 40)
             if self.device == torch.device('cuda:0'):
                 from torchvision.utils import save_image
+                import clip
+                model, preprocess = clip.load("RN50", device='cpu')
+                p_src = model.encode_image(images_src.cpu())
+                p_tgt = model.encode_image(images_target.cpu())
+                _, capsrc = generate_first_feature_caption(p_src, clipcap_model.to('cpu'), 40)
+                _, captrgt = generate_first_feature_caption(p_tgt, clipcap_model.to('cpu'), 40)
+                teacher_features, capsrc = generate_first_feature_caption(prefix_src, clipcap_model.to(self.device), 40)
                 storage = get_event_storage()
                 print("cap_src  ", capsrc)
                 print("cap_trgt ", captrgt)
                 p = '/projects/sina/RegionCLIP/images/'
+
+
                 for i in range(len(images_src)):
                     save_image(images_src[i].cpu(), p + "img_src_iter_{}_img_{}.png".format(storage.iter, i))
                     save_image(images_target[i].cpu(), p + "img_trgt_iter_{}_img_{}.png".format(storage.iter, i))
