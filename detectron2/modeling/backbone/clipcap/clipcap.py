@@ -569,7 +569,11 @@ def generate_first_feature_caption(prefix, model: ClipCaptionModel, prefix_lengt
         tokens = None
         break_flag = False
         out_features = None
+
+
         for i in range(entry_length):
+
+
             # print(i)
             features = model.gpt(inputs_embeds=generated)
 
@@ -591,7 +595,10 @@ def generate_first_feature_caption(prefix, model: ClipCaptionModel, prefix_lengt
             logits[:, indices_to_remove] = filter_value
             next_token = torch.argmax(logits, -1).unsqueeze(0)
             next_token_embed = model.gpt.transformer.wte(next_token)
-
+            if tokens is None:
+                tokens = next_token
+            else:
+                tokens = torch.cat((tokens, next_token), dim=1)
             generated = torch.cat((generated, next_token_embed), dim=1)
 
             if stop_token_index == next_token.item():
