@@ -563,8 +563,7 @@ def generate_first_feature_caption(prefix, model: ClipCaptionModel, prefix_lengt
     break_flag = False
     out_features = None
     res = []
-    for p in model.parameters():
-        p.requires_grad = False
+
     for entry_idx in range(len(embed)):
         generated = embed[entry_idx].unsqueeze(0)
         tokens = None
@@ -599,10 +598,14 @@ def generate_first_feature_caption(prefix, model: ClipCaptionModel, prefix_lengt
                 res.append(out_features[:, -1, :])
                 out_features = None
                 break
+
+        output_list = list(tokens.squeeze().cpu().numpy())
+        output_text = model.tokenizer.decode(output_list)
+        generated_list.append(output_text)
         if out_features is not None:
             res.append(out_features[:, -1, :])
 
-    return res
+    return res,  generated_list[0]
 
 # def prompt_consistency_loss(images):
 #     classes = ['aeroplane', 'bird', 'bicycle', 'boat', 'bottle', 'bus', 'car', 'cat',
