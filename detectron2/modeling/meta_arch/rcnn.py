@@ -223,7 +223,7 @@ class GeneralizedRCNN(nn.Module):
                 p_tgt = model.encode_image(images_target.cpu())
                 _, capsrc = generate_first_feature_caption(p_src, clipcap_model.to('cpu'), 40)
                 _, captrgt = generate_first_feature_caption(p_tgt, clipcap_model.to('cpu'), 40)
-                teacher_features, capsrc = generate_first_feature_caption(prefix_src, clipcap_model.to(self.device), 40)
+                
                 storage = get_event_storage()
                 print("cap_src  ", capsrc)
                 print("cap_trgt ", captrgt)
