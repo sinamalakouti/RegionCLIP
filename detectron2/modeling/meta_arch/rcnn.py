@@ -26,7 +26,10 @@ from ..backbone.clipcap.clipcap import unsupervised_loss, unsupervised_feature_l
 from ..backbone.clipcap.gather import GatherLayer
 __all__ = ["GeneralizedRCNN", "ProposalNetwork"]
 
-from torchvision.transforms import Resize
+from torchvision.transforms import Resize, CenterCrop
+
+from ...data.transforms.torchvision_transforms.functional import InterpolationMode
+from ...data.transforms.torchvision_transforms.transforms import Normalize
 
 
 @META_ARCH_REGISTRY.register()
@@ -145,22 +148,26 @@ class GeneralizedRCNN(nn.Module):
 
 
 
-
     def preprocess_image_train(self, batched_inputs: List[Dict[str, torch.Tensor]]):
         """
         Normalize, pad and batch the input images.
         """
-        images = [x["image"].to(self.device) for x in batched_inputs]
-        images = [(x/255.0 - self.pixel_mean) / self.pixel_std for x in images]
+
+        preprocess2 = nn.Sequential(
+            Resize(size=224, interpolation=InterpolationMode.BICUBIC, max_size=None, antialias=None),
+            CenterCrop(size=(224, 224)),
+            Normalize(mean=self.pixel_mean, std=(0.26862954, 0.26130258, 0.27577711)))
+
+
+        images = [x["image"]/255.0.to(self.device) for x in batched_inputs]
         images = ImageList.from_tensors(images, self.backbone.size_divisibility)
+        images = preprocess2(images)
 
         images_t = [x["image_trgt"].to(self.device) for x in batched_inputs]
-        images_t = [(x/255.0 - self.pixel_mean) / self.pixel_std for x in images_t]
         images_t = ImageList.from_tensors(images_t, self.backbone.size_divisibility)
+        images_t = preprocess2(images_t)
 
-        resizer = Resize((224, 224))
-        images = resizer(images.tensor)
-        images_t = resizer(images_t.tensor)
+
         return images, images_t
 
     def forward(self, batched_inputs: List[Dict[str, torch.Tensor]], clipcap_model=None, branch='supervised'):
