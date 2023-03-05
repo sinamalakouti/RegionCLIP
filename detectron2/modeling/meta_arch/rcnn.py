@@ -22,8 +22,8 @@ from .build import META_ARCH_REGISTRY
 from ..backbone.clipcap.clipcap import unsupervised_loss, unsupervised_feature_loss, generate_feature_caption, \
     generate_first_feature_caption
 
-
 from ..backbone.clipcap.gather import GatherLayer
+
 __all__ = ["GeneralizedRCNN", "ProposalNetwork"]
 
 from torchvision.transforms import Resize, CenterCrop
@@ -146,8 +146,6 @@ class GeneralizedRCNN(nn.Module):
             storage.put_image(vis_name, vis_img)
             break  # only visualize one image in a batch
 
-
-
     def preprocess_image_train(self, batched_inputs: List[Dict[str, torch.Tensor]]):
         """
         Normalize, pad and batch the input images.
@@ -158,14 +156,13 @@ class GeneralizedRCNN(nn.Module):
             CenterCrop(size=(224, 224)),
             Normalize(mean=self.pixel_mean, std=self.pixel_std))
 
-        images = [(x["image"]/255.0).to(self.device) for x in batched_inputs]
+        images = [(x["image"] / 255.0).to(self.device) for x in batched_inputs]
         images = ImageList.from_tensors(images, self.backbone.size_divisibility)
         images = preprocess2(images.tensor)
 
-        images_t = [(x["image_trgt"]/255.0).to(self.device) for x in batched_inputs]
+        images_t = [(x["image_trgt"] / 255.0).to(self.device) for x in batched_inputs]
         images_t = ImageList.from_tensors(images_t, self.backbone.size_divisibility)
         images_t = preprocess2(images_t.tensor)
-
 
         return images, images_t
 
@@ -204,36 +201,35 @@ class GeneralizedRCNN(nn.Module):
                 print(images_target.shape)
                 print(self.training)
 
-
             prefix_src = self.backbone.attnpool(self.backbone(images_src)['res5'])
-            teacher_features,capsrc = generate_first_feature_caption(prefix_src, clipcap_model.to(self.device), 40)
+            teacher_features = generate_first_feature_caption(prefix_src, clipcap_model.to(self.device), 40)
             teacher_features = torch.stack(teacher_features, 0)
 
             prefix_trgt = self.backbone.attnpool(self.backbone(images_target)['res5'])
-            student_features,captrgt = generate_first_feature_caption(prefix_trgt, clipcap_model.to(self.device), 40)
+            student_features = generate_first_feature_caption(prefix_trgt, clipcap_model.to(self.device), 40)
             student_features = torch.stack(student_features, 0)
 
             # loss, captions = unsupervised_loss(prefix_src, prefix_trgt, clipcap_model.to(self.device), 40)
             # loss, captions = unsupervised_feature_loss(prefix_src, prefix_trgt, clipcap_model.to(self.device), 40)
-            if self.device == torch.device('cuda:0'):
-                from torchvision.utils import save_image
-                import clip
-                model, preprocess = clip.load("RN50", device='cpu')
-                p_src = model.encode_image(images_src.cpu())
-                p_tgt = model.encode_image(images_target.cpu())
-                _, clip_src = generate_first_feature_caption(p_src, clipcap_model.to('cpu'), 40)
-                _, clip_trgt = generate_first_feature_caption(p_tgt, clipcap_model.to('cpu'), 40)
-
-                storage = get_event_storage()
-                print("cap_src  ", clip_src)
-                print("cap_trgt ", clip_trgt)
-
-                print("region_clip_src  ", capsrc)
-                print("region_clip_trgt  ", captrgt)
-                p = '/projects/sina/RegionCLIP/images/'
-                for i in range(len(images_src)):
-                    save_image(images_src[i].cpu(), p + "img_src_iter_{}_img_{}.png".format(storage.iter, i))
-                    save_image(images_target[i].cpu(), p + "img_trgt_iter_{}_img_{}.png".format(storage.iter, i))
+            # if self.device == torch.device('cuda:0'):
+            #     from torchvision.utils import save_image
+            #     import clip
+            #     model, preprocess = clip.load("RN50", device='cpu')
+            #     p_src = model.encode_image(images_src.cpu())
+            #     p_tgt = model.encode_image(images_target.cpu())
+            #     _, clip_src = generate_first_feature_caption(p_src, clipcap_model.to('cpu'), 40)
+            #     _, clip_trgt = generate_first_feature_caption(p_tgt, clipcap_model.to('cpu'), 40)
+            #
+            #     storage = get_event_storage()
+            #     print("cap_src  ", clip_src)
+            #     print("cap_trgt ", clip_trgt)
+            #
+            #     print("region_clip_src  ", capsrc)
+            #     print("region_clip_trgt  ", captrgt)
+            #     p = '/projects/sina/RegionCLIP/images/'
+            #     for i in range(len(images_src)):
+            #         save_image(images_src[i].cpu(), p + "img_src_iter_{}_img_{}.png".format(storage.iter, i))
+            #         save_image(images_target[i].cpu(), p + "img_trgt_iter_{}_img_{}.png".format(storage.iter, i))
             teacher_features = teacher_features.squeeze(1)
             student_features = student_features.squeeze(1)
             del images_src
@@ -244,8 +240,7 @@ class GeneralizedRCNN(nn.Module):
             teacher_features = torch.cat(GatherLayer.apply(teacher_features), dim=0)
             student_features = torch.cat(GatherLayer.apply(student_features), dim=0)
 
-
-            teacher_features = (teacher_features / teacher_features.norm(dim=1, keepdim=True))
+            teacher_features = teacher_features / teacher_features.norm(dim=1, keepdim=True)
             student_features = student_features / student_features.norm(dim=1, keepdim=True)
 
             # if student_features.shape != teacher_features.shape:
