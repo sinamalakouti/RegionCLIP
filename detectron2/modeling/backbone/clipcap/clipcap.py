@@ -737,10 +737,10 @@ def generate_first_feature_caption(prefix, model: ClipCaptionModel, prefix_lengt
             logits[:, indices_to_remove] = filter_value
             next_token = torch.argmax(logits, -1).unsqueeze(0)
             next_token_embed = model.gpt.transformer.wte(next_token)
-            # if tokens is None:
-            #     tokens = next_token
-            # else:
-            #     tokens = torch.cat((tokens, next_token), dim=1)
+            if tokens is None:
+                tokens = next_token
+            else:
+                tokens = torch.cat((tokens, next_token), dim=1)
             generated = torch.cat((generated, next_token_embed), dim=1)
 
             if stop_token_index == next_token.item():
@@ -748,10 +748,10 @@ def generate_first_feature_caption(prefix, model: ClipCaptionModel, prefix_lengt
                 out_features = None
                 break
 
-        # output_list = list(tokens.squeeze().cpu().numpy())
-        # output_text = model.tokenizer.decode(output_list)
-        # generated_list.append(output_text)
+        output_list = list(tokens.squeeze().cpu().numpy())
+        output_text = model.tokenizer.decode(output_list)
+        generated_list.append(output_text)
         if out_features is not None:
             res.append(out_features[:, -1, :])
 
-    return res #,  generated_list
+    return res ,  generated_list
