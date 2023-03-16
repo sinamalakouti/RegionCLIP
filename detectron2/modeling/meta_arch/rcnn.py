@@ -32,6 +32,9 @@ from torchvision.transforms.functional import InterpolationMode
 from ...data.transforms.torchvision_transforms.transforms import Normalize
 
 
+
+from detectron2.modeling.backbone.clipcap.clipcap import ClipCaptionModel
+
 @META_ARCH_REGISTRY.register()
 class GeneralizedRCNN(nn.Module):
     """
@@ -45,6 +48,7 @@ class GeneralizedRCNN(nn.Module):
     def __init__(
             self,
             *,
+            offline_backbone: Backbone,
             backbone: Backbone,
             proposal_generator: nn.Module,
             roi_heads: nn.Module,
@@ -67,6 +71,7 @@ class GeneralizedRCNN(nn.Module):
         """
         super().__init__()
         self.backbone = backbone
+        self.offline_backbone = offline_backbone
         self.proposal_generator = proposal_generator
         self.roi_heads = roi_heads
 
@@ -95,7 +100,13 @@ class GeneralizedRCNN(nn.Module):
     @classmethod
     def from_config(cls, cfg):
         backbone = build_backbone(cfg)
+
+        offline_backbone = build_backbone(cfg)
+
+        for p in offline_backbone.parameters(): p.requires_grad = False
+        offline_backbone.eval()
         return {
+            "offline_backbone": offline_backbone,
             "backbone": backbone,
             "proposal_generator": build_proposal_generator(cfg, backbone.output_shape()),
             "roi_heads": build_roi_heads(cfg, backbone.output_shape()),
@@ -200,69 +211,66 @@ class GeneralizedRCNN(nn.Module):
                 print(images_src.shape)
                 print(images_target.shape)
                 print(self.training)
-
-            prefix_src = self.backbone.attnpool(self.backbone(images_src)['res5'])
-            teacher_features,capsrc = generate_first_feature_caption(prefix_src, clipcap_model.to(self.device), 40)
-            teacher_features = torch.stack(teacher_features, 0)
+            with torch.no_grad():
+                prefix_src = self.offline_backbone.attnpool(self.offline_backbone(images_src)['res5'])
+                teacher_features,capsrc = generate_first_feature_caption(prefix_src, clipcap_model.to(self.device), 40)
+                teacher_features = torch.stack(teacher_features, 0)
 
             prefix_trgt = self.backbone.attnpool(self.backbone(images_target)['res5'])
-            student_features,captrgt = generate_first_feature_caption(prefix_trgt, clipcap_model.to(self.device), 40)
-            student_features = torch.stack(student_features, 0)
+            student_features_trgt ,captrgt = generate_first_feature_caption(prefix_trgt, clipcap_model.to(self.device), 40)
+            student_features_trgt = torch.stack(student_features_trgt, 0)
 
-            # loss, captions = unsupervised_loss(prefix_src, prefix_trgt, clipcap_model.to(self.device), 40)
-            # loss, captions = unsupervised_feature_loss(prefix_src, prefix_trgt, clipcap_model.to(self.device), 40)
-            if self.device == torch.device('cuda:0'):
-            #     from torchvision.utils import save_image
-            #     import clip
-            #     model, preprocess = clip.load("RN50", device='cpu')
-            #     p_src = model.encode_image(images_src.cpu())
-            #     p_tgt = model.encode_image(images_target.cpu())
-            #     _, clip_src = generate_first_feature_caption(p_src, clipcap_model.to('cpu'), 40)
-            #     _, clip_trgt = generate_first_feature_caption(p_tgt, clipcap_model.to('cpu'), 40)
-            #
-            #     storage = get_event_storage()
-            #     print("cap_src  ", clip_src)
-            #     print("cap_trgt ", clip_trgt)
-            #
-                print("region_clip_src  ", capsrc)
-                print("region_clip_trgt  ", captrgt)
+            prefix_student_src = self.backbone.attnpool(self.backbone(images_src)['res5'])
+            student_features_src, captrgt_src = generate_first_feature_caption(prefix_student_src, clipcap_model.to(self.device),
+                                                                            40)
+            student_features_src = torch.stack(student_features_src, 0)
+            # #
+            # # # loss, captions = unsupervised_loss(prefix_src, prefix_trgt, clipcap_model.to(self.device), 40)
+            # # # loss, captions = unsupervised_feature_loss(prefix_src, prefix_trgt, clipcap_model.to(self.device), 40)
+            # # if self.device == torch.device('cuda:0'):
+            # # #     from torchvision.utils import save_image
+            # # #     import clip
+            # # #     model, preprocess = clip.load("RN50", device='cpu')
+            # # #     p_src = model.encode_image(images_src.cpu())
+            # # #     p_tgt = model.encode_image(images_target.cpu())
+            # # #     _, clip_src = generate_first_feature_caption(p_src, clipcap_model.to('cpu'), 40)
+            # # #     _, clip_trgt = generate_first_feature_caption(p_tgt, clipcap_model.to('cpu'), 40)
+            # # #
+            # # #     storage = get_event_storage()
+            # # #     print("cap_src  ", clip_src)
+            # # #     print("cap_trgt ", clip_trgt)
+            # #
+            #     print("region_clip_src  ", capsrc)
+            #     print("region_clip_trgt  ", captrgt)
             #     p = '/projects/sina/RegionCLIP/images/'
             #     for i in range(len(images_src)):
             #         save_image(images_src[i].cpu(), p + "img_src_iter_{}_img_{}.png".format(storage.iter, i))
             #         save_image(images_target[i].cpu(), p + "img_trgt_iter_{}_img_{}.png".format(storage.iter, i))
             teacher_features = teacher_features.squeeze(1)
-            student_features = student_features.squeeze(1)
+            student_features_trgt = student_features_trgt.squeeze(1)
+            student_features_src = student_features_src.squeeze(1)
             del images_src
             # del prefix_src
             del images_target
             del batched_inputs
 
             teacher_features = torch.cat(GatherLayer.apply(teacher_features), dim=0)
-            student_features = torch.cat(GatherLayer.apply(student_features), dim=0)
+            student_features_trgt = torch.cat(GatherLayer.apply(student_features_trgt), dim=0)
+            student_features_src = torch.cat(GatherLayer.apply(student_features_src), dim=0)
 
             teacher_features = teacher_features / teacher_features.norm(dim=1, keepdim=True)
-            student_features = student_features / student_features.norm(dim=1, keepdim=True)
+            student_features_trgt = student_features_trgt / student_features_trgt.norm(dim=1, keepdim=True)
+            student_features_src = student_features_src / student_features_src.norm(dim=1, keepdim=True)
 
-            # if student_features.shape != teacher_features.shape:
-            #     print("jizzzzzz")
-            #     print(student_features.shape)
-            #     print(teacher_features.shape)
-            #     print(self.training)
-            joint_features = student_features @ teacher_features.t()
-            n = len(joint_features)
+            joint_features_trgt = student_features_trgt @ teacher_features.t()
+            joint_features_src = student_features_src @ teacher_features.t()
+
+
+            n = len(joint_features_trgt)
             ground_truth = torch.arange(n, dtype=torch.long, device=self.device)
-            # print("n isssssssssssss   ", n)
-            # print(ground_truthx1)
-            # print(joint_features.shape)
 
-            # loss_fn = nn.MSELoss()
-            # # print("EROORR" * 10)
-            # # print(ground_truth.shape)
-            # # print(joint_features.shape)
-            # # print(teacher_features)
-            # loss = loss_fn(teacher_features.detach(), student_features)
             loss_fn = nn.CrossEntropyLoss()
-            loss = loss_fn(joint_features, ground_truth)
+            loss = loss_fn(joint_features_trgt, ground_truth) + loss_fn(joint_features_src, ground_truth)
             return loss
 
         images = self.preprocess_image(batched_inputs)
