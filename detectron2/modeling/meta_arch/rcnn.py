@@ -48,7 +48,7 @@ class GeneralizedRCNN(nn.Module):
     def __init__(
             self,
             *,
-            offline_backbone: Backbone,
+            # offline_backbone: Backbone,
             backbone: Backbone,
             proposal_generator: nn.Module,
             roi_heads: nn.Module,
@@ -71,7 +71,7 @@ class GeneralizedRCNN(nn.Module):
         """
         super().__init__()
         self.backbone = backbone
-        self.offline_backbone = offline_backbone
+        # self.offline_backbone = offline_backbone
         self.proposal_generator = proposal_generator
         self.roi_heads = roi_heads
 
@@ -101,12 +101,12 @@ class GeneralizedRCNN(nn.Module):
     def from_config(cls, cfg):
         backbone = build_backbone(cfg)
 
-        offline_backbone = build_backbone(cfg)
+        # offline_backbone = build_backbone(cfg)
 
-        for p in offline_backbone.parameters(): p.requires_grad = False
-        offline_backbone.eval()
+        # for p in offline_backbone.parameters(): p.requires_grad = False
+        # offline_backbone.eval()
         return {
-            "offline_backbone": offline_backbone,
+            # "offline_backbone": offline_backbone,
             "backbone": backbone,
             "proposal_generator": build_proposal_generator(cfg, backbone.output_shape()),
             "roi_heads": build_roi_heads(cfg, backbone.output_shape()),
@@ -177,6 +177,136 @@ class GeneralizedRCNN(nn.Module):
 
         return images, images_t
 
+    # def forward(self, batched_inputs: List[Dict[str, torch.Tensor]], clipcap_model=None, branch='supervised'):
+    #     """
+    #     Args:
+    #         batched_inputs: a list, batched outputs of :class:`DatasetMapper` .
+    #             Each item in the list contains the inputs for one image.
+    #             For now, each item in the list is a dict that contains:
+    #
+    #             * image: Tensor, image in (C, H, W) format.
+    #             * instances (optional): groundtruth :class:`Instances`
+    #             * proposals (optional): :class:`Instances`, precomputed proposals.
+    #
+    #             Other information that's included in the original dicts, such as:
+    #
+    #             * "height", "width" (int): the output resolution of the model, used in inference.
+    #               See :meth:`postprocess` for details.
+    #
+    #     Returns:
+    #         list[dict]:
+    #             Each dict is the output for one input image.
+    #             The dict contains one key "instances" whose value is a :class:`Instances`.
+    #             The :class:`Instances` object has the following keys:
+    #             "pred_boxes", "pred_classes", "scores", "pred_masks", "pred_keypoints"
+    #     """
+    #     torch.cuda.empty_cache()
+    #     if not self.training:
+    #         return self.inference(batched_inputs)
+    #     if branch == 'caption_consistency':
+    #         images_src, images_target = self.preprocess_image_train(batched_inputs)
+    #         with torch.no_grad():
+    #             prefix_src = self.offline_backbone.attnpool(self.offline_backbone(images_src)['res5'])
+    #             teacher_features,capsrc = generate_first_feature_caption(prefix_src, clipcap_model.to(self.device), 40)
+    #             teacher_features = torch.stack(teacher_features, 0)
+    #
+    #         student_prefix_trgt = self.backbone.attnpool(self.backbone(images_target)['res5'])
+    #         student_features_trgt ,captrgt = generate_first_feature_caption(student_prefix_trgt, clipcap_model.to(self.device), 40)
+    #         student_features_trgt = torch.stack(student_features_trgt, 0)
+    #
+    #         student_prefix_src = self.backbone.attnpool(self.backbone(images_src)['res5'])
+    #         student_features_src, captrgt_src = generate_first_feature_caption(student_prefix_src, clipcap_model.to(self.device),
+    #                                                                         40)
+    #         student_features_src = torch.stack(student_features_src, 0)
+    #         # #
+    #         # # # loss, captions = unsupervised_loss(prefix_src, prefix_trgt, clipcap_model.to(self.device), 40)
+    #         # # # loss, captions = unsupervised_feature_loss(prefix_src, prefix_trgt, clipcap_model.to(self.device), 40)
+    #         # # if self.device == torch.device('cuda:0'):
+    #         # # #     from torchvision.utils import save_image
+    #         # # #     import clip
+    #         # # #     model, preprocess = clip.load("RN50", device='cpu')
+    #         # # #     p_src = model.encode_image(images_src.cpu())
+    #         # # #     p_tgt = model.encode_image(images_target.cpu())
+    #         # # #     _, clip_src = generate_first_feature_caption(p_src, clipcap_model.to('cpu'), 40)
+    #         # # #     _, clip_trgt = generate_first_feature_caption(p_tgt, clipcap_model.to('cpu'), 40)
+    #         # # #
+    #         # # #     storage = get_event_storage()
+    #         # # #     print("cap_src  ", clip_src)
+    #         # # #     print("cap_trgt ", clip_trgt)
+    #         # #
+    #         #     print("region_clip_src  ", capsrc)
+    #         #     print("region_clip_trgt  ", captrgt)
+    #         #     p = '/projects/sina/RegionCLIP/images/'
+    #         #     for i in range(len(images_src)):
+    #         #         save_image(images_src[i].cpu(), p + "img_src_iter_{}_img_{}.png".format(storage.iter, i))
+    #         #         save_image(images_target[i].cpu(), p + "img_trgt_iter_{}_img_{}.png".format(storage.iter, i))
+    #         teacher_features = teacher_features.squeeze(1)
+    #         student_features_trgt = student_features_trgt.squeeze(1)
+    #         student_features_src = student_features_src.squeeze(1)
+    #         del images_src
+    #         # del prefix_src
+    #         del images_target
+    #         del batched_inputs
+    #
+    #         teacher_features = torch.cat(GatherLayer.apply(teacher_features), dim=0)
+    #         student_features_trgt = torch.cat(GatherLayer.apply(student_features_trgt), dim=0)
+    #         student_features_src = torch.cat(GatherLayer.apply(student_features_src), dim=0)
+    #
+    #         teacher_features = teacher_features / teacher_features.norm(dim=1, keepdim=True)
+    #         student_features_trgt = student_features_trgt / student_features_trgt.norm(dim=1, keepdim=True)
+    #         student_features_src = student_features_src / student_features_src.norm(dim=1, keepdim=True)
+    #
+    #         joint_features_trgt = student_features_trgt @ teacher_features.t()
+    #         joint_features_src = student_features_src @ teacher_features.t()
+    #
+    #
+    #         n = len(joint_features_trgt)
+    #         ground_truth = torch.arange(n, dtype=torch.long, device=self.device)
+    #
+    #         loss_fn = nn.CrossEntropyLoss()
+    #
+    #         joint_features = student_features_trgt @ student_features_src.t()
+    #
+    #         loss = loss_fn(joint_features, ground_truth)
+    #         # loss = loss_fn(joint_features_trgt, ground_truth) + loss_fn(joint_features_src, ground_truth)
+    #         return loss
+    #
+    #     images = self.preprocess_image(batched_inputs)
+    #     if "instances" in batched_inputs[0]:
+    #         gt_instances = [x["instances"].to(self.device) for x in batched_inputs]
+    #     else:
+    #         gt_instances = None
+    #     # eg: {'p2': torch.Size([b, c, 200, 304]), 'p3': torch.Size([b, c, 100, 152]), 'p4': torch.Size([b, c, 50, 76]), 'p5': torch.Size([b, c, 25, 38]), 'p6': torch.Size([b, c, 13, 19])}
+    #     features = self.backbone(images.tensor)
+    #     if self.proposal_generator is not None:
+    #         proposals, proposal_losses = self.proposal_generator(images, features, gt_instances)
+    #     else:
+    #         assert "proposals" in batched_inputs[0]
+    #         proposals = [x["proposals"].to(self.device) for x in batched_inputs]
+    #         proposal_losses = {}
+    #
+    #     if self.use_clip_c4:  # use C4 + resnet weights from CLIP
+    #         if self.use_clip_attpool:  # use att_pool from CLIP to match dimension
+    #             _, detector_losses = self.roi_heads(images, features, proposals, gt_instances,
+    #                                                 res5=self.backbone.layer4, attnpool=self.backbone.attnpool)
+    #         else:  # use default mean pool
+    #             _, detector_losses = self.roi_heads(images, features, proposals, gt_instances,
+    #                                                 res5=self.backbone.layer4)
+    #     else:  # default setting
+    #         _, detector_losses = self.roi_heads(images, features, proposals, gt_instances)
+    #     if self.vis_period > 0:
+    #         storage = get_event_storage()
+    #         if storage.iter % self.vis_period == 0:
+    #             self.visualize_training(batched_inputs, proposals)
+    #
+    #     losses = {}
+    #     losses.update(detector_losses)
+    #     losses.update(proposal_losses)
+    #     return losses
+
+
+
+
     def forward(self, batched_inputs: List[Dict[str, torch.Tensor]], clipcap_model=None, branch='supervised'):
         """
         Args:
@@ -205,19 +335,19 @@ class GeneralizedRCNN(nn.Module):
             return self.inference(batched_inputs)
         if branch == 'caption_consistency':
             images_src, images_target = self.preprocess_image_train(batched_inputs)
-            with torch.no_grad():
-                prefix_src = self.offline_backbone.attnpool(self.offline_backbone(images_src)['res5'])
-                teacher_features,capsrc = generate_first_feature_caption(prefix_src, clipcap_model.to(self.device), 40)
-                teacher_features = torch.stack(teacher_features, 0)
+
+            prefix_src = self.backbone.attnpool(self.backbone(images_src)['res5'])
+            teacher_features,capsrc = generate_first_feature_caption(prefix_src, clipcap_model.to(self.device), 40)
+            teacher_features = torch.stack(teacher_features, 0)
 
             student_prefix_trgt = self.backbone.attnpool(self.backbone(images_target)['res5'])
             student_features_trgt ,captrgt = generate_first_feature_caption(student_prefix_trgt, clipcap_model.to(self.device), 40)
             student_features_trgt = torch.stack(student_features_trgt, 0)
 
-            student_prefix_src = self.backbone.attnpool(self.backbone(images_src)['res5'])
-            student_features_src, captrgt_src = generate_first_feature_caption(student_prefix_src, clipcap_model.to(self.device),
-                                                                            40)
-            student_features_src = torch.stack(student_features_src, 0)
+            # student_prefix_src = self.backbone.attnpool(self.backbone(images_src)['res5'])
+            # student_features_src, captrgt_src = generate_first_feature_caption(student_prefix_src, clipcap_model.to(self.device),
+            #                                                                 40)
+            # student_features_src = torch.stack(student_features_src, 0)
             # #
             # # # loss, captions = unsupervised_loss(prefix_src, prefix_trgt, clipcap_model.to(self.device), 40)
             # # # loss, captions = unsupervised_feature_loss(prefix_src, prefix_trgt, clipcap_model.to(self.device), 40)
@@ -242,7 +372,7 @@ class GeneralizedRCNN(nn.Module):
             #         save_image(images_target[i].cpu(), p + "img_trgt_iter_{}_img_{}.png".format(storage.iter, i))
             teacher_features = teacher_features.squeeze(1)
             student_features_trgt = student_features_trgt.squeeze(1)
-            student_features_src = student_features_src.squeeze(1)
+            # student_features_src = student_features_src.squeeze(1)
             del images_src
             # del prefix_src
             del images_target
@@ -250,14 +380,14 @@ class GeneralizedRCNN(nn.Module):
 
             teacher_features = torch.cat(GatherLayer.apply(teacher_features), dim=0)
             student_features_trgt = torch.cat(GatherLayer.apply(student_features_trgt), dim=0)
-            student_features_src = torch.cat(GatherLayer.apply(student_features_src), dim=0)
+            # student_features_src = torch.cat(GatherLayer.apply(student_features_src), dim=0)
 
             teacher_features = teacher_features / teacher_features.norm(dim=1, keepdim=True)
             student_features_trgt = student_features_trgt / student_features_trgt.norm(dim=1, keepdim=True)
-            student_features_src = student_features_src / student_features_src.norm(dim=1, keepdim=True)
+            # student_features_src = student_features_src / student_features_src.norm(dim=1, keepdim=True)
 
             joint_features_trgt = student_features_trgt @ teacher_features.t()
-            joint_features_src = student_features_src @ teacher_features.t()
+            # joint_features_src = student_features_src @ teacher_features.t()
 
 
             n = len(joint_features_trgt)
@@ -265,9 +395,9 @@ class GeneralizedRCNN(nn.Module):
 
             loss_fn = nn.CrossEntropyLoss()
 
-            joint_features = student_features_trgt @ student_features_src.t()
+            # joint_features = student_features_trgt @ student_features_src.t()
 
-            loss = loss_fn(joint_features, ground_truth)
+            loss = loss_fn(joint_features_trgt, ground_truth)
             # loss = loss_fn(joint_features_trgt, ground_truth) + loss_fn(joint_features_src, ground_truth)
             return loss
 
@@ -303,7 +433,6 @@ class GeneralizedRCNN(nn.Module):
         losses.update(detector_losses)
         losses.update(proposal_losses)
         return losses
-
     def inference(
             self,
             batched_inputs: List[Dict[str, torch.Tensor]],
