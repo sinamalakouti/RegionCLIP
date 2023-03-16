@@ -305,7 +305,9 @@ class SimpleTrainer(TrainerBase):
 
         loss_dict = self.model(data)
         loss = {}
-        if self.iter > 15000:
+        #for l in loss_dict:
+            #loss_dict[l] = loss_dict[l] * 0.0
+        if self.iter > 10100 :
 
             caption_consistency_loss = self.model(data, clipcap_model=self.clipcap_model, branch='caption_consistency')
             loss['caption_consistency_loss'] = caption_consistency_loss
@@ -324,8 +326,41 @@ class SimpleTrainer(TrainerBase):
         wrap the optimizer with your custom `zero_grad()` method.
         """
         self.optimizer.zero_grad()
+        
+        
+        #a = list(self.clipcap_model.clip_project.parameters())[-1].clone()
         losses.backward()
+        
+        import copy
+
+        #old = copy.deepcopy(list(self.model.module.backbone.parameters()))
+        
+        #a = list(self.model.module.backbone.parameters())[0].clone()
+        self.optimizer.step()
+        
+        #new = list(self.model.module.backbone.parameters())
+        
+        #b = list(self.clipcap_model.clip_project.parameters())[-1].clone()
+       
+      #  if self.model.device == torch.device('cuda:0'):
+    
+          #   print(a)
+       #     print("-"*10)
+         #    print(b)
+          #   print("check")
+        #    print(a.data-b.data)
+          #  print("sum"*100)
+         #   print(sum(a.data-b.data))
+             
+            # print('*'*10)
+             #print(torch.equal(a.data, b.data))
+        #for i in range(len(new))#:
+         #   print(new[i].data == old[i].data)
+
+
         report_loss = {}
+
+        
         for k in loss_dict.keys():
             report_loss[k] = loss_dict[k].detach()
         self._write_metrics(loss_dict, data_time)
@@ -335,7 +370,7 @@ class SimpleTrainer(TrainerBase):
         wrap the optimizer with your custom `step()` method. But it is
         suboptimal as explained in https://arxiv.org/abs/2006.15704 Sec 3.2.4
         """
-        self.optimizer.step()
+        #self.optimizer.step()
 
     def _write_metrics(
             self,
