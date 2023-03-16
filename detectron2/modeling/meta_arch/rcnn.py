@@ -205,23 +205,17 @@ class GeneralizedRCNN(nn.Module):
             return self.inference(batched_inputs)
         if branch == 'caption_consistency':
             images_src, images_target = self.preprocess_image_train(batched_inputs)
-
-            if images_src.shape != images_target.shape:
-                print("gooz11")
-                print(images_src.shape)
-                print(images_target.shape)
-                print(self.training)
             with torch.no_grad():
                 prefix_src = self.offline_backbone.attnpool(self.offline_backbone(images_src)['res5'])
                 teacher_features,capsrc = generate_first_feature_caption(prefix_src, clipcap_model.to(self.device), 40)
                 teacher_features = torch.stack(teacher_features, 0)
 
-            prefix_trgt = self.backbone.attnpool(self.backbone(images_target)['res5'])
-            student_features_trgt ,captrgt = generate_first_feature_caption(prefix_trgt, clipcap_model.to(self.device), 40)
+            student_prefix_trgt = self.backbone.attnpool(self.backbone(images_target)['res5'])
+            student_features_trgt ,captrgt = generate_first_feature_caption(student_prefix_trgt, clipcap_model.to(self.device), 40)
             student_features_trgt = torch.stack(student_features_trgt, 0)
 
-            prefix_student_src = self.backbone.attnpool(self.backbone(images_src)['res5'])
-            student_features_src, captrgt_src = generate_first_feature_caption(prefix_student_src, clipcap_model.to(self.device),
+            student_prefix_src = self.backbone.attnpool(self.backbone(images_src)['res5'])
+            student_features_src, captrgt_src = generate_first_feature_caption(student_prefix_src, clipcap_model.to(self.device),
                                                                             40)
             student_features_src = torch.stack(student_features_src, 0)
             # #
@@ -270,7 +264,11 @@ class GeneralizedRCNN(nn.Module):
             ground_truth = torch.arange(n, dtype=torch.long, device=self.device)
 
             loss_fn = nn.CrossEntropyLoss()
-            loss = loss_fn(joint_features_trgt, ground_truth) + loss_fn(joint_features_src, ground_truth)
+
+            joint_features = student_features_trgt @ student_features_src.t()
+
+            loss = loss_fn(joint_features, ground_truth)
+            # loss = loss_fn(joint_features_trgt, ground_truth) + loss_fn(joint_features_src, ground_truth)
             return loss
 
         images = self.preprocess_image(batched_inputs)
