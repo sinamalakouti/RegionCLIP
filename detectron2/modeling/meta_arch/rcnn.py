@@ -265,10 +265,10 @@ class GeneralizedRCNN(nn.Module):
 
             loss_fn = nn.CrossEntropyLoss()
 
-            joint_features = student_features_trgt @ student_features_src.t()
+            # joint_features = student_features_trgt @ student_features_src.t()
 
-            loss = loss_fn(joint_features, ground_truth)
-            # loss = loss_fn(joint_features_trgt, ground_truth) + loss_fn(joint_features_src, ground_truth)
+            # loss = loss_fn(joint_features, ground_truth)
+            loss = loss_fn(joint_features_trgt, ground_truth) + loss_fn(joint_features_src, ground_truth)
             return loss
 
         images = self.preprocess_image(batched_inputs)
