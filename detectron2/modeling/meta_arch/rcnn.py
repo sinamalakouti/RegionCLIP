@@ -31,8 +31,9 @@ from torchvision.transforms import Resize, CenterCrop
 from torchvision.transforms.functional import InterpolationMode
 from ...data.transforms.torchvision_transforms.transforms import Normalize
 
-from detectron2.modeling.backbone.clipcap.clipcap import ClipCaptionModel
 
+
+from detectron2.modeling.backbone.clipcap.clipcap import ClipCaptionModel
 
 @META_ARCH_REGISTRY.register()
 class GeneralizedRCNN(nn.Module):
@@ -303,6 +304,9 @@ class GeneralizedRCNN(nn.Module):
     #     losses.update(proposal_losses)
     #     return losses
 
+
+
+
     def forward(self, batched_inputs: List[Dict[str, torch.Tensor]], clipcap_model=None, branch='supervised'):
         """
         Args:
@@ -333,12 +337,11 @@ class GeneralizedRCNN(nn.Module):
             images_src, images_target = self.preprocess_image_train(batched_inputs)
 
             prefix_src = self.backbone.attnpool(self.backbone(images_src)['res5'])
-            teacher_features, capsrc = generate_first_feature_caption(prefix_src, clipcap_model.to(self.device), 40)
+            teacher_features,capsrc = generate_first_feature_caption(prefix_src, clipcap_model.to(self.device), 40)
             teacher_features = torch.stack(teacher_features, 0)
 
             student_prefix_trgt = self.backbone.attnpool(self.backbone(images_target)['res5'])
-            student_features_trgt, captrgt = generate_first_feature_caption(student_prefix_trgt,
-                                                                            clipcap_model.to(self.device), 40)
+            student_features_trgt ,captrgt = generate_first_feature_caption(student_prefix_trgt, clipcap_model.to(self.device), 40)
             student_features_trgt = torch.stack(student_features_trgt, 0)
 
             # student_prefix_src = self.backbone.attnpool(self.backbone(images_src)['res5'])
@@ -386,6 +389,7 @@ class GeneralizedRCNN(nn.Module):
             joint_features_trgt = student_features_trgt @ teacher_features.t()
             # joint_features_src = student_features_src @ teacher_features.t()
 
+
             n = len(joint_features_trgt)
             ground_truth = torch.arange(n, dtype=torch.long, device=self.device)
 
@@ -429,7 +433,6 @@ class GeneralizedRCNN(nn.Module):
         losses.update(detector_losses)
         losses.update(proposal_losses)
         return losses
-
     def inference(
             self,
             batched_inputs: List[Dict[str, torch.Tensor]],
