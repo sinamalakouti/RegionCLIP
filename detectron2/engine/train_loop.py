@@ -148,8 +148,8 @@ class TrainerBase:
             try:
                 self.before_train()
                 print("loading offlinee backbone params")
-                self.model.module.offline_backbone.load_state_dict(torch.load('/projects/sina/RegionCLIP/output/model_rgionclip_baseline-prompt_10k.pth')['model'], self.model.device)
-                # self.model.module.offline_backbone.load_state_dict(self.model.module.backbone.state_dict())
+                # self.model.module.offline_backbone.load_state_dict(torch.load('/projects/sina/RegionCLIP/output/model_rgionclip_baseline-prompt_10k.pth')['model'], self.model.device)
+                self.model.module.offline_backbone.load_state_dict(self.model.module.backbone.state_dict())
                 print("OK. .. Done")
                 for self.iter in range(start_iter, max_iter):
                     self.before_step()
