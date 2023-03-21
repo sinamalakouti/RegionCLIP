@@ -272,7 +272,7 @@ class GeneralizedRCNN(nn.Module):
 
             cont_loss = loss_fn(joint_features, ground_truth)
             total_loss = cont_loss + kd_loss
-            return total_loss
+            return cont_loss, kd_loss
 
         images = self.preprocess_image(batched_inputs)
         if "instances" in batched_inputs[0]:
