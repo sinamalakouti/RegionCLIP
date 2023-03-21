@@ -148,7 +148,8 @@ class TrainerBase:
             try:
                 self.before_train()
                 print("loading offlinee backbone params")
-                self.model.module.offline_backbone.load_state_dict(self.model.module.backbone.state_dict())
+                # load
+                self.model.module.offline_backbone.load_state_dict(self.model.module.backbone.clone().state_dict())
                 print("OK. .. Done")
                 for self.iter in range(start_iter, max_iter):
                     self.before_step()

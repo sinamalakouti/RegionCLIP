@@ -205,15 +205,18 @@ class GeneralizedRCNN(nn.Module):
             return self.inference(batched_inputs)
         if branch == 'caption_consistency':
             images_src, images_target = self.preprocess_image_train(batched_inputs)
-            with torch.no_grad():
-                prefix_src = self.offline_backbone.attnpool(self.offline_backbone(images_src)['res5'])
-                teacher_features,capsrc = generate_first_feature_caption(prefix_src, clipcap_model.to(self.device), 40)
-                teacher_features = torch.stack(teacher_features, 0)
 
+            # offline backbone on src
+            prefix_src = self.offline_backbone.attnpool(self.offline_backbone(images_src)['res5'])
+            teacher_features, capsrc = generate_first_feature_caption(prefix_src, clipcap_model.to(self.device), 40)
+            teacher_features = torch.stack(teacher_features, 0).detach()  # detach the offline backbone
+
+            # backbone on target
             student_prefix_trgt = self.backbone.attnpool(self.backbone(images_target)['res5'])
             student_features_trgt ,captrgt = generate_first_feature_caption(student_prefix_trgt, clipcap_model.to(self.device), 40)
             student_features_trgt = torch.stack(student_features_trgt, 0)
 
+            # backbone on src
             student_prefix_src = self.backbone.attnpool(self.backbone(images_src)['res5'])
             student_features_src, captrgt_src = generate_first_feature_caption(student_prefix_src, clipcap_model.to(self.device),
                                                                             40)
@@ -248,28 +251,28 @@ class GeneralizedRCNN(nn.Module):
             del images_target
             del batched_inputs
 
-            teacher_features = torch.cat(GatherLayer.apply(teacher_features), dim=0)
+            l1_loss = torch.nn.L1Loss()
+
+            kd_loss = l1_loss(teacher_features, student_features_src)
+
             student_features_trgt = torch.cat(GatherLayer.apply(student_features_trgt), dim=0)
             student_features_src = torch.cat(GatherLayer.apply(student_features_src), dim=0)
 
-            teacher_features = teacher_features / teacher_features.norm(dim=1, keepdim=True)
             student_features_trgt = student_features_trgt / student_features_trgt.norm(dim=1, keepdim=True)
             student_features_src = student_features_src / student_features_src.norm(dim=1, keepdim=True)
 
-            joint_features_trgt = student_features_trgt @ teacher_features.t()
-            joint_features_src = student_features_src @ teacher_features.t()
-
-
-            n = len(joint_features_trgt)
-            ground_truth = torch.arange(n, dtype=torch.long, device=self.device)
-
             loss_fn = nn.CrossEntropyLoss()
 
-            # joint_features = student_features_trgt @ student_features_src.t()
+            joint_features = student_features_trgt @ student_features_src.t()
+            n = len(joint_features)
+            ground_truth = torch.arange(n, dtype=torch.long, device=self.device)
 
             # loss = loss_fn(joint_features, ground_truth)
-            loss = loss_fn(joint_features_trgt, ground_truth) + loss_fn(joint_features_src, ground_truth)
-            return loss
+            # loss = loss_fn(joint_features_trgt, ground_truth) + loss_fn(joint_features_src, ground_truth)
+
+            cont_loss = loss_fn(joint_features, ground_truth)
+            total_loss = cont_loss + kd_loss
+            return total_loss
 
         images = self.preprocess_image(batched_inputs)
         if "instances" in batched_inputs[0]:
