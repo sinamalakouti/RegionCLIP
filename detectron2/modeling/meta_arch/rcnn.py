@@ -20,7 +20,7 @@ from ..proposal_generator import build_proposal_generator
 from ..roi_heads import build_roi_heads
 from .build import META_ARCH_REGISTRY
 from ..backbone.clipcap.clipcap import unsupervised_loss, unsupervised_feature_loss, generate_feature_caption, \
-    generate_first_feature_caption
+    generate_first_feature_caption, v2l
 
 from ..backbone.clipcap.gather import GatherLayer
 
@@ -31,9 +31,8 @@ from torchvision.transforms import Resize, CenterCrop
 from torchvision.transforms.functional import InterpolationMode
 from ...data.transforms.torchvision_transforms.transforms import Normalize
 
-
-
 from detectron2.modeling.backbone.clipcap.clipcap import ClipCaptionModel
+
 
 @META_ARCH_REGISTRY.register()
 class GeneralizedRCNN(nn.Module):
@@ -96,6 +95,8 @@ class GeneralizedRCNN(nn.Module):
         # self.clipcap_model = ClipCaptionModel(40, 40)
         # p = torch.load('/Users/sinamalakouti/Desktop/test-regionclip/transformer_weights.pt', 'cpu')
         # self.clipcap_model.load_state_dict(p)
+
+        self.projector = nn.Linear(30720, 256)
 
     @classmethod
     def from_config(cls, cfg):
@@ -177,6 +178,136 @@ class GeneralizedRCNN(nn.Module):
 
         return images, images_t
 
+    def first_feature_contrastive(self, images_src, images_target, clipcap_model):
+        # offline backbone on src
+        prefix_src = self.offline_backbone.attnpool(self.offline_backbone(images_src)['res5'])
+        teacher_features, capsrc = generate_first_feature_caption(prefix_src, clipcap_model.to(self.device), 40)
+        teacher_features = torch.stack(teacher_features, 0).detach()  # detach the offline backbone
+
+        # backbone on target
+        student_prefix_trgt = self.backbone.attnpool(self.backbone(images_target)['res5'])
+        student_features_trgt, captrgt = generate_first_feature_caption(student_prefix_trgt,
+                                                                        clipcap_model.to(self.device), 40)
+        student_features_trgt = torch.stack(student_features_trgt, 0)
+
+        # backbone on src
+        student_prefix_src = self.backbone.attnpool(self.backbone(images_src)['res5'])
+        student_features_src, captrgt_src = generate_first_feature_caption(student_prefix_src,
+                                                                           clipcap_model.to(self.device),
+                                                                           40)
+        student_features_src = torch.stack(student_features_src, 0)
+        # #
+        # # # loss, captions = unsupervised_loss(prefix_src, prefix_trgt, clipcap_model.to(self.device), 40)
+        # # # loss, captions = unsupervised_feature_loss(prefix_src, prefix_trgt, clipcap_model.to(self.device), 40)
+        # # if self.device == torch.device('cuda:0'):
+        # # #     from torchvision.utils import save_image
+        # # #     import clip
+        # # #     model, preprocess = clip.load("RN50", device='cpu')
+        # # #     p_src = model.encode_image(images_src.cpu())
+        # # #     p_tgt = model.encode_image(images_target.cpu())
+        # # #     _, clip_src = generate_first_feature_caption(p_src, clipcap_model.to('cpu'), 40)
+        # # #     _, clip_trgt = generate_first_feature_caption(p_tgt, clipcap_model.to('cpu'), 40)
+        # # #
+        # # #     storage = get_event_storage()
+        # # #     print("cap_src  ", clip_src)
+        # # #     print("cap_trgt ", clip_trgt)
+        # #
+        #     print("region_clip_src  ", capsrc)
+        #     print("region_clip_trgt  ", captrgt)
+        #     p = '/projects/sina/RegionCLIP/images/'
+        #     for i in range(len(images_src)):
+        #         save_image(images_src[i].cpu(), p + "img_src_iter_{}_img_{}.png".format(storage.iter, i))
+        #         save_image(images_target[i].cpu(), p + "img_trgt_iter_{}_img_{}.png".format(storage.iter, i))
+        teacher_features = teacher_features.squeeze(1)
+        student_features_trgt = student_features_trgt.squeeze(1)
+        student_features_src = student_features_src.squeeze(1)
+        del images_src
+        del images_target
+
+        l1_loss = torch.nn.L1Loss()
+
+        kd_loss = l1_loss(teacher_features, student_features_src)
+
+        student_features_trgt = torch.cat(GatherLayer.apply(student_features_trgt), dim=0)
+        student_features_src = torch.cat(GatherLayer.apply(student_features_src), dim=0)
+
+        student_features_trgt = student_features_trgt / student_features_trgt.norm(dim=1, keepdim=True)
+        student_features_src = student_features_src / student_features_src.norm(dim=1, keepdim=True)
+
+        loss_fn = nn.CrossEntropyLoss()
+
+        joint_features = student_features_trgt @ student_features_src.t()
+        n = len(joint_features)
+        ground_truth = torch.arange(n, dtype=torch.long, device=self.device)
+
+        # loss = loss_fn(joint_features, ground_truth)
+        # loss = loss_fn(joint_features_trgt, ground_truth) + loss_fn(joint_features_src, ground_truth)
+
+        cont_loss = loss_fn(joint_features, ground_truth)
+
+        return cont_loss, kd_loss
+
+    def v2l_contrastive(self, images_src, images_target, clipcap_model):
+        # offline backbone on src
+        prefix_src = self.offline_backbone.attnpool(self.offline_backbone(images_src)['res5'])
+        teacher_features = v2l(prefix_src, clipcap_model.to(self.device)).detach()
+
+        # backbone on target
+        student_prefix_trgt = self.backbone.attnpool(self.backbone(images_target)['res5'])
+        student_features_trgt = v2l(student_prefix_trgt, clipcap_model.to(self.device))
+
+        student_features_trgt = self.projector(student_features_trgt)
+
+        # backbone on src
+        student_prefix_src = self.backbone.attnpool(self.backbone(images_src)['res5'])
+        student_features_src = v2l(student_prefix_src, clipcap_model.to(self.device))
+        student_features_src = self.projector(student_features_src)
+        # #
+        # # # loss, captions = unsupervised_loss(prefix_src, prefix_trgt, clipcap_model.to(self.device), 40)
+        # # # loss, captions = unsupervised_feature_loss(prefix_src, prefix_trgt, clipcap_model.to(self.device), 40)
+        # # if self.device == torch.device('cuda:0'):
+        # # #     from torchvision.utils import save_image
+        # # #     import clip
+        # # #     model, preprocess = clip.load("RN50", device='cpu')
+        # # #     p_src = model.encode_image(images_src.cpu())
+        # # #     p_tgt = model.encode_image(images_target.cpu())
+        # # #     _, clip_src = generate_first_feature_caption(p_src, clipcap_model.to('cpu'), 40)
+        # # #     _, clip_trgt = generate_first_feature_caption(p_tgt, clipcap_model.to('cpu'), 40)
+        # # #
+        # # #     storage = get_event_storage()
+        # # #     print("cap_src  ", clip_src)
+        # # #     print("cap_trgt ", clip_trgt)
+        # #
+        #     print("region_clip_src  ", capsrc)
+        #     print("region_clip_trgt  ", captrgt)
+        #     p = '/projects/sina/RegionCLIP/images/'
+        #     for i in range(len(images_src)):
+        #         save_image(images_src[i].cpu(), p + "img_src_iter_{}_img_{}.png".format(storage.iter, i))
+        #         save_image(images_target[i].cpu(), p + "img_trgt_iter_{}_img_{}.png".format(storage.iter, i))
+
+        del images_src
+        del images_target
+
+        l1_loss = torch.nn.L1Loss()
+
+        kd_loss = l1_loss(teacher_features, student_features_src)
+
+        student_features_trgt = torch.cat(GatherLayer.apply(student_features_trgt), dim=0)
+        student_features_src = torch.cat(GatherLayer.apply(student_features_src), dim=0)
+
+        student_features_trgt = student_features_trgt / student_features_trgt.norm(dim=1, keepdim=True)
+        student_features_src = student_features_src / student_features_src.norm(dim=1, keepdim=True)
+
+        loss_fn = nn.CrossEntropyLoss()
+
+        joint_features = student_features_trgt @ student_features_src.t()
+        n = len(joint_features)
+        ground_truth = torch.arange(n, dtype=torch.long, device=self.device)
+
+        cont_loss = loss_fn(joint_features, ground_truth)
+
+        return cont_loss, kd_loss
+
     def forward(self, batched_inputs: List[Dict[str, torch.Tensor]], clipcap_model=None, branch='supervised'):
         """
         Args:
@@ -205,73 +336,8 @@ class GeneralizedRCNN(nn.Module):
             return self.inference(batched_inputs)
         if branch == 'caption_consistency':
             images_src, images_target = self.preprocess_image_train(batched_inputs)
-
-            # offline backbone on src
-            prefix_src = self.offline_backbone.attnpool(self.offline_backbone(images_src)['res5'])
-            teacher_features, capsrc = generate_first_feature_caption(prefix_src, clipcap_model.to(self.device), 40)
-            teacher_features = torch.stack(teacher_features, 0).detach()  # detach the offline backbone
-
-            # backbone on target
-            student_prefix_trgt = self.backbone.attnpool(self.backbone(images_target)['res5'])
-            student_features_trgt ,captrgt = generate_first_feature_caption(student_prefix_trgt, clipcap_model.to(self.device), 40)
-            student_features_trgt = torch.stack(student_features_trgt, 0)
-
-            # backbone on src
-            student_prefix_src = self.backbone.attnpool(self.backbone(images_src)['res5'])
-            student_features_src, captrgt_src = generate_first_feature_caption(student_prefix_src, clipcap_model.to(self.device),
-                                                                            40)
-            student_features_src = torch.stack(student_features_src, 0)
-            # #
-            # # # loss, captions = unsupervised_loss(prefix_src, prefix_trgt, clipcap_model.to(self.device), 40)
-            # # # loss, captions = unsupervised_feature_loss(prefix_src, prefix_trgt, clipcap_model.to(self.device), 40)
-            # # if self.device == torch.device('cuda:0'):
-            # # #     from torchvision.utils import save_image
-            # # #     import clip
-            # # #     model, preprocess = clip.load("RN50", device='cpu')
-            # # #     p_src = model.encode_image(images_src.cpu())
-            # # #     p_tgt = model.encode_image(images_target.cpu())
-            # # #     _, clip_src = generate_first_feature_caption(p_src, clipcap_model.to('cpu'), 40)
-            # # #     _, clip_trgt = generate_first_feature_caption(p_tgt, clipcap_model.to('cpu'), 40)
-            # # #
-            # # #     storage = get_event_storage()
-            # # #     print("cap_src  ", clip_src)
-            # # #     print("cap_trgt ", clip_trgt)
-            # #
-            #     print("region_clip_src  ", capsrc)
-            #     print("region_clip_trgt  ", captrgt)
-            #     p = '/projects/sina/RegionCLIP/images/'
-            #     for i in range(len(images_src)):
-            #         save_image(images_src[i].cpu(), p + "img_src_iter_{}_img_{}.png".format(storage.iter, i))
-            #         save_image(images_target[i].cpu(), p + "img_trgt_iter_{}_img_{}.png".format(storage.iter, i))
-            teacher_features = teacher_features.squeeze(1)
-            student_features_trgt = student_features_trgt.squeeze(1)
-            student_features_src = student_features_src.squeeze(1)
-            del images_src
-            # del prefix_src
-            del images_target
-            del batched_inputs
-
-            l1_loss = torch.nn.L1Loss()
-
-            kd_loss = l1_loss(teacher_features, student_features_src)
-
-            student_features_trgt = torch.cat(GatherLayer.apply(student_features_trgt), dim=0)
-            student_features_src = torch.cat(GatherLayer.apply(student_features_src), dim=0)
-
-            student_features_trgt = student_features_trgt / student_features_trgt.norm(dim=1, keepdim=True)
-            student_features_src = student_features_src / student_features_src.norm(dim=1, keepdim=True)
-
-            loss_fn = nn.CrossEntropyLoss()
-
-            joint_features = student_features_trgt @ student_features_src.t()
-            n = len(joint_features)
-            ground_truth = torch.arange(n, dtype=torch.long, device=self.device)
-
-            # loss = loss_fn(joint_features, ground_truth)
-            # loss = loss_fn(joint_features_trgt, ground_truth) + loss_fn(joint_features_src, ground_truth)
-
-            cont_loss = loss_fn(joint_features, ground_truth)
-
+            cont_loss, kd_loss = self.v2l_contrastive(images_src, images_target, clipcap_model)
+            # cont_loss, kd_loss = self.first_feature_contrastive(images_src, images_target, clipcap_model)
             return cont_loss, kd_loss
 
         images = self.preprocess_image(batched_inputs)
@@ -306,9 +372,6 @@ class GeneralizedRCNN(nn.Module):
         losses.update(detector_losses)
         losses.update(proposal_losses)
         return losses
-
-
-
 
     # def forward(self, batched_inputs: List[Dict[str, torch.Tensor]], clipcap_model=None, branch='supervised'):
     #     """
