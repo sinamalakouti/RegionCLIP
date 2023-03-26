@@ -615,8 +615,10 @@ def generate_first_feature_caption(prefix, model: ClipCaptionModel, prefix_lengt
 
 
 def v2l(prefix, model: ClipCaptionModel):
-    embed = model.clip_project(prefix)
-    return embed
+    prefix_length = 40
+    gpt_embedding_size = 768
+    embed = model.clip_project(prefix).view(-1, prefix_length, gpt_embedding_size)
+    return embed.view(embed.shape[0], -1)
 
 
 # def prompt_consistency_loss(images):

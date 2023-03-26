@@ -255,12 +255,16 @@ class GeneralizedRCNN(nn.Module):
         # backbone on target
         student_prefix_trgt = self.backbone.attnpool(self.backbone(images_target)['res5'])
         student_features_trgt = v2l(student_prefix_trgt, clipcap_model.to(self.device))
-
         student_features_trgt = self.projector(student_features_trgt)
 
         # backbone on src
         student_prefix_src = self.backbone.attnpool(self.backbone(images_src)['res5'])
         student_features_src = v2l(student_prefix_src, clipcap_model.to(self.device))
+
+        l1_loss = torch.nn.L1Loss()
+
+        kd_loss = l1_loss(teacher_features, student_features_src)
+
         student_features_src = self.projector(student_features_src)
         # #
         # # # loss, captions = unsupervised_loss(prefix_src, prefix_trgt, clipcap_model.to(self.device), 40)
@@ -288,9 +292,7 @@ class GeneralizedRCNN(nn.Module):
         del images_src
         del images_target
 
-        l1_loss = torch.nn.L1Loss()
 
-        kd_loss = l1_loss(teacher_features, student_features_src)
 
         student_features_trgt = torch.cat(GatherLayer.apply(student_features_trgt), dim=0)
         student_features_src = torch.cat(GatherLayer.apply(student_features_src), dim=0)
