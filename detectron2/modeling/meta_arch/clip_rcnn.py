@@ -111,6 +111,8 @@ class CLIPFastRCNN(nn.Module):
             # create offline cfg for the pretrained backbone & RPN
             from detectron2.config import get_cfg
             offline_cfg = get_cfg()
+            print("NOO:"*1000)
+            print(offline_cfg)
             offline_cfg.merge_from_file(cfg.MODEL.CLIP.OFFLINE_RPN_CONFIG)
             if cfg.MODEL.CLIP.OFFLINE_RPN_LSJ_PRETRAINED: # large-scale jittering (LSJ) pretrained RPN
                 offline_cfg.MODEL.BACKBONE.FREEZE_AT = 0 # make all fronzon layers to "SyncBN"
@@ -392,6 +394,7 @@ class PretrainFastRCNN(nn.Module):
             vis_period: the period to run visualization. Set to 0 to disable.
         """
         super().__init__()
+        
         self.offline_backbone = offline_backbone
         self.backbone = backbone
         self.offline_proposal_generator = offline_proposal_generator
@@ -457,6 +460,7 @@ class PretrainFastRCNN(nn.Module):
 
     @classmethod
     def from_config(cls, cfg):
+       # print("HI"*100)
         if cfg.MODEL.CLIP.CROP_REGION_TYPE == "RPN": # create isolated backbone & RPN
             # create offline cfg for the pretrained backbone & RPN
             from detectron2.config import get_cfg
@@ -473,6 +477,7 @@ class PretrainFastRCNN(nn.Module):
                 offline_cfg.MODEL.RPN.NMS_THRESH = cfg.MODEL.CLIP.OFFLINE_RPN_NMS_THRESH
             
             # create offline backbone and RPN
+            #print(offline_cfg)
             offline_backbone = build_backbone(offline_cfg) # build_resnet_fpn_backbone(cfg, ShapeSpec(channels=len(cfg.MODEL.PIXEL_MEAN)))
             offline_rpn = build_proposal_generator(offline_cfg, offline_backbone.output_shape())
             # convert to evaluation mode
