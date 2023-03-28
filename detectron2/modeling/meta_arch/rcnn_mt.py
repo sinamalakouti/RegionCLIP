@@ -377,11 +377,9 @@ class DAobjTwoStagePseudoLabGeneralizedRCNN(nn.Module):
             losses.update(proposal_losses)
 
             # now compute caption_consistency loss
-            images_src, images_src2trgt = self.preprocess_image_caption_consistency(batched_inputs)
-            cont_loss, kd_loss = self.v2l_contrastive(images_src, images_src2trgt, clipcap_model)
-            # cont_loss, kd_loss = self.first_feature_contrastive(images_src, images_target, clipcap_model)
-            losses['loss_cont'] = cont_loss * 0.0
-            losses['loss_kd'] = kd_loss * 0.0
+            # cont_loss, kd_loss = self.v2l_contrastive(images, images, clipcap_model)
+            # losses['loss_cont'] = cont_loss * 0.0
+            # losses['loss_kd'] = kd_loss * 0.0
 
             return losses, [], [], None
         elif branch == 'supervised_target':
