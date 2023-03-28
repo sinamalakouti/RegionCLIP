@@ -503,10 +503,10 @@ class   ATeacherTrainer(DefaultTrainer):
         # data_q and data_k from different augmentations (q:strong, k:weak)
         # label_strong, label_weak, unlabed_strong, unlabled_weak
         label_data_q, label_data_k, label_style_transfer, unlabel_data_q, unlabel_data_k,  = data
-        print("checkking the length of all dataa")
-        print(len(label_data_k))
-        print(len(label_style_transfer))
-        print(len(unlabel_data_k))
+        # print("checkking the length of all dataa")
+        # print(len(label_data_k))
+        # print(len(label_style_transfer))
+        # print(len(unlabel_data_k))
         data_time = time.perf_counter() - start
 
         # burn-in stage (supervised training with labeled data)

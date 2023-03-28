@@ -298,6 +298,7 @@ class AspectRatioGroupedSemiSupDatasetTwoCrop(AspectRatioGroupedDataset):
             if (
                 len(label_bucket) == self.batch_size_label
                 and len(unlabel_bucket) == self.batch_size_unlabel
+                and len(label_buckets_style) == self.batch_size_label
             ):
                 # label_strong, label_weak, unlabed_strong, unlabled_weak
 
