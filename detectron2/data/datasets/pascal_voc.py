@@ -42,13 +42,15 @@ def load_voc_instances(dirname: str, split: str, class_names: Union[List[str], T
     dicts = []
 
     print("reading voc data")
-    print("is_voc")
+    print("is_voc", is_voc)
     print(dirname)
     print(split)
 
     print("-"*100)
 
     for fileid in fileids:
+        print("anno is   ", anno_file)
+        print("jpeg_file is   ", jpeg_file)
         anno_file = os.path.join(annotation_dirname, fileid + ".xml")
         jpeg_file = os.path.join(dirname, "JPEGImages", fileid + ".jpg")
         if "VOC2007" in jpeg_file:
