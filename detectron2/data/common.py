@@ -267,6 +267,7 @@ class AspectRatioGroupedSemiSupDatasetTwoCrop(AspectRatioGroupedDataset):
     def __iter__(self):
         label_bucket, unlabel_bucket = [], []
         for d_label, d_unlabel in zip(self.label_dataset, self.unlabel_dataset):
+            print("here in AspectRatioGroupedSemiSupDatasetTwoCrop  d_label is " d_label)
             # d is a tuple with len = 2
             # It's two images (same size) from the same image instance
             # d[0] is with strong augmentation, d[1] is with weak augmentation
