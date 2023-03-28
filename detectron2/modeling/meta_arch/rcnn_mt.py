@@ -158,8 +158,8 @@ class DAobjTwoStagePseudoLabGeneralizedRCNN(nn.Module):
         """
         Normalize, pad and batch the input images.
         """
-        print( "in rcnn_mt")
-        print(batched_inputs)
+        # print( "in rcnn_mt")
+        # print(batched_inputs)
         preprocess2 = nn.Sequential(
             Resize(size=224, interpolation=InterpolationMode.BICUBIC, max_size=None, antialias=None),
             CenterCrop(size=(224, 224)),
@@ -305,7 +305,7 @@ class DAobjTwoStagePseudoLabGeneralizedRCNN(nn.Module):
 
         return cont_loss, kd_loss
 
-    def forward(self, batched_inputs: List[Dict[str, torch.Tensor]], clipcap_model=None, branch='supervised'):
+    def forward(self, batched_inputs: List[Dict[str, torch.Tensor]], clipcap_model=None, branch='supervised', offline_backbone=None):
         """
         Args:
             batched_inputs: a list, batched outputs of :class:`DatasetMapper` .
@@ -333,7 +333,7 @@ class DAobjTwoStagePseudoLabGeneralizedRCNN(nn.Module):
             return self.inference(batched_inputs)
         if branch == 'caption_consistency':
             images_src, images_target = self.preprocess_image_caption_consistency(batched_inputs)
-            cont_loss, kd_loss = self.v2l_contrastive(images_src, images_target, clipcap_model)
+            cont_loss, kd_loss = self.v2l_contrastive(images_src, images_target, clipcap_model, offline_backbone)
             # cont_loss, kd_loss = self.first_feature_contrastive(images_src, images_target, clipcap_model)
             losses = {}
             losses['loss_cont'] = cont_loss
