@@ -619,7 +619,7 @@ class   ATeacherTrainer(DefaultTrainer):
 
             for i_index in range(len(label_style_transfer)):
                 # unlabel_data_item = {}
-                for k, v in unlabel_data_k[i_index].items():
+                for k, v in label_style_transfer[i_index].items():
                     # label_data_k[i_index][k + "_unlabeled"] = v
                     label_data_k[i_index][k + "_unlabeled"] = v
                 # unlabel_data_k[i_index] = unlabel_data_item
