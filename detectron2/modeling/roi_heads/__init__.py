@@ -31,4 +31,5 @@ from .fast_rcnn import FastRCNNOutputLayers
 
 from . import cascade_rcnn  # isort:skip
 
+from .clip_roi_heads import CLIPRes5ROIHeadsPseudoLab
 __all__ = list(globals().keys())

@@ -156,3 +156,4 @@ def make_clip_dataset(cfg, is_train=True, is_aux=False, transforms=None):
     if not datasets:
         return None, None, None
     return datasets, precomputed_tokens, dataset_classes
+

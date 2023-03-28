@@ -24,6 +24,7 @@ import torch
 import detectron2.utils.comm as comm
 from detectron2.checkpoint import DetectionCheckpointer
 from detectron2.config import get_cfg
+from detectron2.config.config import add_ateacher_config
 from detectron2.data import MetadataCatalog
 from detectron2.engine import DefaultTrainer, default_argument_parser, default_setup, hooks, launch
 from detectron2.evaluation import (
@@ -42,6 +43,9 @@ from detectron2.modeling import GeneralizedRCNNWithTTA
 #os.environ['CUDA_VISIBLE_DEVICES'] = "2"
 #os.environ['CUDA_LAUNCH_BLOCKING'] = '1'
 import torch.multiprocessing
+
+from tools.train_net import ATeacherTrainer
+
 torch.multiprocessing.set_sharing_strategy('file_system')
 
 class Trainer(DefaultTrainer):
@@ -125,6 +129,7 @@ def setup(args):
     Create configs and perform basic setups.
     """
     cfg = get_cfg()
+    add_ateacher_config(cfg)
     cfg.merge_from_file(args.config_file)
     cfg.merge_from_list(args.opts)
     cfg.freeze()
@@ -158,7 +163,11 @@ def main(args):
     consider writing your own training loop (see plain_train_net.py) or
     subclassing the trainer.
     """
-    trainer = Trainer(cfg)
+    if cfg.SEMISUPNET.Trainer == "ateacher":
+        Trainer1 = ATeacherTrainer
+    else:
+        Trainer1 = Trainer
+    trainer = Trainer1(cfg)
     trainer.resume_or_load(resume=args.resume)
     if cfg.TEST.AUG.ENABLED:
         trainer.register_hooks(

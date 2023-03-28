@@ -9,9 +9,11 @@ from .build import (
     load_proposals_into_dataset,
     print_instances_class_histogram,
 )
+
+from .clip_build import *
 from .catalog import DatasetCatalog, MetadataCatalog, Metadata
 from .common import DatasetFromList, MapDataset
-from .dataset_mapper import DatasetMapper
+from .dataset_mapper import DatasetMapper, DatasetMapperTwoCropSeparate
 
 # ensure the builtin datasets are registered
 from . import datasets, samplers  # isort:skip
