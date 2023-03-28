@@ -28,6 +28,7 @@ import torch
 import detectron2.utils.comm as comm
 from detectron2.checkpoint import DetectionCheckpointer
 from detectron2.config import get_cfg
+from detectron2.config.config import add_ateacher_config
 from detectron2.data import MetadataCatalog, DatasetMapperTwoCropSeparate
 from detectron2.data.build import build_detection_semisup_train_loader_two_crops
 from detectron2.engine import DefaultTrainer, default_argument_parser, default_setup, hooks, launch
@@ -621,6 +622,7 @@ def setup(args):
     Create configs and perform basic setups.
     """
     cfg = get_cfg()
+    add_ateacher_config()
     cfg.merge_from_file(args.config_file)
     cfg.merge_from_list(args.opts)
     cfg.freeze()
@@ -654,6 +656,12 @@ def main(args):
     consider writing your own training loop (see plain_train_net.py) or
     subclassing the trainer.
     """
+    if cfg.SEMISUPNET.Trainer == "ateacher":
+        Trainer1 = ATeacherTrainer
+    else:
+        Trainer1 = Trainer
+    trainer = Trainer1(cfg)
+    
     trainer = Trainer(cfg)
     trainer.resume_or_load(resume=args.resume)
     if cfg.TEST.AUG.ENABLED:
