@@ -46,6 +46,8 @@ def load_voc_instances(dirname: str, split: str, class_names: Union[List[str], T
     print(dirname)
     print(split)
 
+    print("-"*100)
+
     for fileid in fileids:
         anno_file = os.path.join(annotation_dirname, fileid + ".xml")
         jpeg_file = os.path.join(dirname, "JPEGImages", fileid + ".jpg")
