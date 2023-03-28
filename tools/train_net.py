@@ -625,7 +625,7 @@ class   ATeacherTrainer(DefaultTrainer):
                 # unlabel_data_k[i_index] = unlabel_data_item
 
             all_domain_data = label_data_k
-            record_all_domain_data, _, _, _ = self.model(all_domain_data, branch="caption_consistency")
+            record_all_domain_data, _, _, _ = self.model(all_domain_data, branch="caption_consistency", clipcap_model=self.clipcap_model, offline_backbone=self.offline_backbone)
             record_dict.update(record_all_domain_data)
 
             # weight losses
