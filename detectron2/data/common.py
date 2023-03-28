@@ -300,6 +300,8 @@ class AspectRatioGroupedSemiSupDatasetTwoCrop(AspectRatioGroupedDataset):
                 and len(unlabel_bucket) == self.batch_size_unlabel
             ):
                 # label_strong, label_weak, unlabed_strong, unlabled_weak
+
+                assert len(label_buckets_style) == len(label_bucket), 'not equal length for buckets'
                 yield (
                     label_bucket[:],
                     label_buckets_key[:],
@@ -309,6 +311,6 @@ class AspectRatioGroupedSemiSupDatasetTwoCrop(AspectRatioGroupedDataset):
                 )
                 del label_bucket[:]
                 del label_buckets_key[:]
-                label_buckets_style[:],
+                del label_buckets_style[:],
                 del unlabel_bucket[:]
                 del unlabel_buckets_key[:]
