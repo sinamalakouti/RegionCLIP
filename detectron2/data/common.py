@@ -259,6 +259,7 @@ class AspectRatioGroupedSemiSupDatasetTwoCrop(AspectRatioGroupedDataset):
 
         self._label_buckets = [[] for _ in range(2)]
         self._label_buckets_key = [[] for _ in range(2)]
+        self._label_buckets_style = [[] for _ in range(2)]
         self._unlabel_buckets = [[] for _ in range(2)]
         self._unlabel_buckets_key = [[] for _ in range(2)]
         # Hard-coded two aspect ratio groups: w > h and w < h.
@@ -267,7 +268,7 @@ class AspectRatioGroupedSemiSupDatasetTwoCrop(AspectRatioGroupedDataset):
     def __iter__(self):
         label_bucket, unlabel_bucket = [], []
         for d_label, d_unlabel in zip(self.label_dataset, self.unlabel_dataset):
-            print("here in AspectRatioGroupedSemiSupDatasetTwoCrop  d_label is " d_label)
+
             # d is a tuple with len = 2
             # It's two images (same size) from the same image instance
             # d[0] is with strong augmentation, d[1] is with weak augmentation
@@ -282,6 +283,8 @@ class AspectRatioGroupedSemiSupDatasetTwoCrop(AspectRatioGroupedDataset):
                 label_bucket.append(d_label[0])
                 label_buckets_key = self._label_buckets_key[label_bucket_id]
                 label_buckets_key.append(d_label[1])
+                label_buckets_style = self._label_buckets_style[label_bucket_id]
+                label_buckets_style.append(d_label[2])
 
             if len(unlabel_bucket) != self.batch_size_unlabel:
                 w, h = d_unlabel[0]["width"], d_unlabel[0]["height"]
@@ -300,10 +303,12 @@ class AspectRatioGroupedSemiSupDatasetTwoCrop(AspectRatioGroupedDataset):
                 yield (
                     label_bucket[:],
                     label_buckets_key[:],
+                    label_buckets_style[:],
                     unlabel_bucket[:],
                     unlabel_buckets_key[:],
                 )
                 del label_bucket[:]
                 del label_buckets_key[:]
+                label_buckets_style[:],
                 del unlabel_bucket[:]
                 del unlabel_buckets_key[:]
