@@ -334,7 +334,7 @@ class   ATeacherTrainer(DefaultTrainer):
             try:
                 self.before_train()
                 print("loading offlinee backbone params")
-                self.offline_backbone.load_state_dict(self.model.backbone.state_dict())
+                self.offline_backbone.load_state_dict(self.model.module.backbone.state_dict())
                 for p in self.offline_backbone.parameters(): p.requires_grad = False
                 self.offline_backbone.eval()
                 print("OK. .. Done")
