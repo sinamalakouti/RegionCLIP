@@ -158,7 +158,8 @@ class DAobjTwoStagePseudoLabGeneralizedRCNN(nn.Module):
         """
         Normalize, pad and batch the input images.
         """
-
+        print( "in rcnn_mt")
+        print(batched_inputs)
         preprocess2 = nn.Sequential(
             Resize(size=224, interpolation=InterpolationMode.BICUBIC, max_size=None, antialias=None),
             CenterCrop(size=(224, 224)),
