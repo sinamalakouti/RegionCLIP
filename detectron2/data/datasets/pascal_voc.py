@@ -41,19 +41,19 @@ def load_voc_instances(dirname: str, split: str, class_names: Union[List[str], T
     annotation_dirname = PathManager.get_local_path(os.path.join(dirname, "Annotations/"))
     dicts = []
 
-    print("reading voc data")
-    print("is_voc", is_voc)
-    print(dirname)
-    print(split)
-
-    print("-"*100)
+    # print("reading voc data")
+    # print("is_voc", is_voc)
+    # print(dirname)
+    # print(split)
+    #
+    # print("-"*100)
 
     for fileid in fileids:
 
         anno_file = os.path.join(annotation_dirname, fileid + ".xml")
         jpeg_file = os.path.join(dirname, "JPEGImages", fileid + ".jpg")
-        print("anno is   ", anno_file)
-        print("jpeg_file is   ", jpeg_file)
+        # print("anno is   ", anno_file)
+        # print("jpeg_file is   ", jpeg_file)
         if "VOC2007" in jpeg_file:
             voc_dir = "VOC2007"
         else:
