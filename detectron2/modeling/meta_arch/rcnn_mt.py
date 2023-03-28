@@ -112,7 +112,7 @@ class DAobjTwoStagePseudoLabGeneralizedRCNN(nn.Module):
             "pixel_mean": cfg.MODEL.PIXEL_MEAN,
             "pixel_std": cfg.MODEL.PIXEL_STD,
             "use_clip_c4": cfg.MODEL.BACKBONE.NAME == "build_clip_resnet_backbone",
-            "use_clip_attpool": cfg.MODEL.ROI_HEADS.NAME == 'CLIPRes5ROIHeads' and cfg.MODEL.CLIP.USE_TEXT_EMB_CLASSIFIER,
+            "use_clip_attpool":   'CLIPRes5ROIHeads' in cfg.MODEL.ROI_HEADS.NAME and cfg.MODEL.CLIP.USE_TEXT_EMB_CLASSIFIER,
         }
 
     @property
