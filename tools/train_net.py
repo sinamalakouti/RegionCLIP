@@ -756,7 +756,7 @@ def main(args):
         Trainer1 = Trainer
     trainer = Trainer1(cfg)
 
-    trainer = Trainer(cfg)
+    # trainer = Trainer(cfg)
     trainer.resume_or_load(resume=args.resume)
     if cfg.TEST.AUG.ENABLED:
         trainer.register_hooks(
