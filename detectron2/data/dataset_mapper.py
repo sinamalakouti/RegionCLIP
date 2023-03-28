@@ -467,7 +467,7 @@ class DatasetMapperTwoCropSeparate(DatasetMapper):
         utils.check_image_size(dataset_dict, image)
 
         if "clipart_dt_file_name" in dataset_dict:
-            image_src2trgt = utils.read_image(dataset_dict["clipart_dt_file_name"], format=self.image_format)
+            image_src2trgt = utils.read_image(dataset_dict["clipart_dt_file_name"], format=self.img_format)
             utils.check_image_size(dataset_dict, image_src2trgt)
         else:
             image_src2trgt = None
