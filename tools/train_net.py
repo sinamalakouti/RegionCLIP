@@ -30,7 +30,7 @@ from detectron2.checkpoint import DetectionCheckpointer
 from detectron2.config import get_cfg
 from detectron2.config.config import add_ateacher_config
 from detectron2.data import MetadataCatalog, DatasetMapperTwoCropSeparate
-from detectron2.data.build import build_detection_semisup_train_loader_two_crops
+from detectron2.data.build import build_detection_semisup_train_loader_two_crops, build_detection_test_loader
 from detectron2.engine import DefaultTrainer, default_argument_parser, default_setup, hooks, launch
 from detectron2.engine.train_loop import AMPTrainer, SimpleTrainer, TrainerBase
 from detectron2.evaluation import (
@@ -55,6 +55,7 @@ import torch.multiprocessing
 
 from detectron2.modeling.backbone.clipcap.clipcap import ClipCaptionModel
 from detectron2.modeling.meta_arch.ensemble_model import EnsembleModel
+from detectron2.structures import Instances, Boxes
 from detectron2.utils.events import EventStorage
 
 torch.multiprocessing.set_sharing_strategy('file_system')
@@ -418,6 +419,44 @@ class   ATeacherTrainer(DefaultTrainer):
         else:
             self.model_teacher.load_state_dict(self.model.state_dict())
 
+    # =====================================================
+    # ================== Pseduo-labeling ==================
+    # =====================================================
+    def threshold_bbox(self, proposal_bbox_inst, thres=0.7, proposal_type="roih"):
+        if proposal_type == "rpn":
+            valid_map = proposal_bbox_inst.objectness_logits > thres
+
+            # create instances containing boxes and gt_classes
+            image_shape = proposal_bbox_inst.image_size
+            new_proposal_inst = Instances(image_shape)
+
+            # create box
+            new_bbox_loc = proposal_bbox_inst.proposal_boxes.tensor[valid_map, :]
+            new_boxes = Boxes(new_bbox_loc)
+
+            # add boxes to instances
+            new_proposal_inst.gt_boxes = new_boxes
+            new_proposal_inst.objectness_logits = proposal_bbox_inst.objectness_logits[
+                valid_map
+            ]
+        elif proposal_type == "roih":
+            valid_map = proposal_bbox_inst.scores > thres
+
+            # create instances containing boxes and gt_classes
+            image_shape = proposal_bbox_inst.image_size
+            new_proposal_inst = Instances(image_shape)
+
+            # create box
+            new_bbox_loc = proposal_bbox_inst.pred_boxes.tensor[valid_map, :]
+            new_boxes = Boxes(new_bbox_loc)
+
+            # add boxes to instances
+            new_proposal_inst.gt_boxes = new_boxes
+            new_proposal_inst.gt_classes = proposal_bbox_inst.pred_classes[valid_map]
+            new_proposal_inst.scores = proposal_bbox_inst.scores[valid_map]
+
+        return new_proposal_inst
+
 
     def process_pseudo_label(
             self, proposals_rpn_unsup_k, cur_threshold, proposal_type, psedo_label_method=""
@@ -614,8 +653,63 @@ class   ATeacherTrainer(DefaultTrainer):
         losses.backward()
         self.optimizer.step()
 
+    @classmethod
+    def build_test_loader(cls, cfg, dataset_name):
+        return build_detection_test_loader(cfg, dataset_name)
 
+    def build_hooks(self):
+        cfg = self.cfg.clone()
+        cfg.defrost()
+        cfg.DATALOADER.NUM_WORKERS = 0  # save some memory and time for PreciseBN
 
+        ret = [
+            hooks.IterationTimer(),
+            hooks.LRScheduler(self.optimizer, self.scheduler),
+            hooks.PreciseBN(
+                # Run at the same freq as (but before) evaluation.
+                cfg.TEST.EVAL_PERIOD,
+                self.model,
+                # Build a new data loader to not affect training
+                self.build_train_loader(cfg),
+                cfg.TEST.PRECISE_BN.NUM_ITER,
+            )
+            if cfg.TEST.PRECISE_BN.ENABLED and get_bn_modules(self.model)
+            else None,
+        ]
+
+        # Do PreciseBN before checkpointer, because it updates the model and need to
+        # be saved by checkpointer.
+        # This is not always the best: if checkpointing has a different frequency,
+        # some checkpoints may have more precise statistics than others.
+        if comm.is_main_process():
+            ret.append(
+                hooks.PeriodicCheckpointer(
+                    self.checkpointer, cfg.SOLVER.CHECKPOINT_PERIOD
+                )
+            )
+
+        def test_and_save_results_student():
+            self._last_eval_results_student = self.test(self.cfg, self.model)
+            _last_eval_results_student = {
+                k + "_student": self._last_eval_results_student[k]
+                for k in self._last_eval_results_student.keys()
+            }
+            return _last_eval_results_student
+
+        def test_and_save_results_teacher():
+            self._last_eval_results_teacher = self.test(
+                self.cfg, self.model_teacher)
+            return self._last_eval_results_teacher
+
+        ret.append(hooks.EvalHook(cfg.TEST.EVAL_PERIOD,
+                                  test_and_save_results_student))
+        ret.append(hooks.EvalHook(cfg.TEST.EVAL_PERIOD,
+                                  test_and_save_results_teacher))
+
+        if comm.is_main_process():
+            # run writers in the end, so that evaluation metrics are written
+            ret.append(hooks.PeriodicWriter(self.build_writers(), period=20))
+        return ret
 
 def setup(args):
     """
