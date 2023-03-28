@@ -159,7 +159,7 @@ class CLIPFastRCNN(nn.Module):
             "pixel_std": cfg.MODEL.PIXEL_STD,
             "clip_crop_region_type" : cfg.MODEL.CLIP.CROP_REGION_TYPE,
             "use_clip_c4": cfg.MODEL.BACKBONE.NAME == "build_clip_resnet_backbone",
-            "use_clip_attpool": cfg.MODEL.ROI_HEADS.NAME in ['CLIPRes5ROIHeads', 'CLIPStandardROIHeads'] and cfg.MODEL.CLIP.USE_TEXT_EMB_CLASSIFIER,
+            "use_clip_attpool": cfg.MODEL.ROI_HEADS.NAME in ['CLIPRes5ROIHeads', 'CLIPStandardROIHeads', 'CLIPRes5ROIHeadsPseudoLab'] and cfg.MODEL.CLIP.USE_TEXT_EMB_CLASSIFIER,
             "offline_input_format": offline_cfg.INPUT.FORMAT if offline_cfg else None,
             "offline_pixel_mean": offline_cfg.MODEL.PIXEL_MEAN if offline_cfg else None,
             "offline_pixel_std": offline_cfg.MODEL.PIXEL_STD if offline_cfg else None,

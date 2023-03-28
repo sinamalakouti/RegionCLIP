@@ -440,7 +440,7 @@ class FastRCNNOutputLayers(nn.Module):
                     
         self.use_clip_cls_emb = clip_cls_emb[0]
         if self.use_clip_cls_emb: # use CLIP text embeddings as classifier's weights
-            input_size = clip_cls_emb[3] if clip_cls_emb[2] in ['CLIPRes5ROIHeads', 'CLIPStandardROIHeads'] else input_size
+            input_size = clip_cls_emb[3] if clip_cls_emb[2] in ['CLIPRes5ROIHeads', 'CLIPStandardROIHeads', 'CLIPRes5ROIHeadsPseudoLab'] else input_size
             text_emb_require_grad = False
             self.use_bias = False
             self.temperature = openset_test[2] # 0.01 is default for CLIP
@@ -544,7 +544,7 @@ class FastRCNNOutputLayers(nn.Module):
             x = torch.flatten(x, start_dim=1)
         
         # use clip text embeddings as classifier's weights
-        if self.use_clip_cls_emb: 
+        if self.use_clip_cls_emb:
             normalized_x = F.normalize(x, p=2.0, dim=1)
              # open-set inference enabled
             if not self.training and self.test_cls_score is not None: 
