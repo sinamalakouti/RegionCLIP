@@ -170,9 +170,9 @@ class   ATeacherTrainer(DefaultTrainer):
         #clipcap model
 
         self.clipcap_model = ClipCaptionModel(40, 40)
-        p = torch.load('/Users/sinamalakouti/Desktop/RegionCLIP/test-regionclip/transformer_weights_r50.pt', 'cpu')
+        # p = torch.load('/Users/sinamalakouti/Desktop/RegionCLIP/test-regionclip/transformer_weights_r50.pt', 'cpu')
         # p = torch.load('/projects/sina/RegionCLIP/pretrained_ckpt/transformer_r50_regionCLIP.pt', 'cpu')
-        # p = torch.load('/projects/sina/RegionCLIP/pretrained_ckpt/transformers_pretrained_RegionCLIP.pt' , 'cpu')
+        p = torch.load('/projects/sina/RegionCLIP/pretrained_ckpt/transformers_pretrained_RegionCLIP.pt' , 'cpu')
         self.clipcap_model.load_state_dict(p)
         # self.clipcap_model.lm_head = self.clipcap_model.gpt.lm_head
         # self.clipcap_model.gpt.lm_head = Identity()
@@ -661,7 +661,7 @@ def main(args):
     else:
         Trainer1 = Trainer
     trainer = Trainer1(cfg)
-    
+
     trainer = Trainer(cfg)
     trainer.resume_or_load(resume=args.resume)
     if cfg.TEST.AUG.ENABLED:
