@@ -54,7 +54,7 @@ from detectron2.modeling import GeneralizedRCNNWithTTA, build_backbone
 import torch.multiprocessing
 
 # from detectron2.modeling.backbone.clipcap.clipcap import ClipCaptionModel
-# from detectron2.modeling.meta_arch.ensemble_model import EnsembleModel
+from detectron2.modeling.meta_arch.ensemble_model import EnsembleModel
 from detectron2.structures import Instances, Boxes
 from detectron2.utils.events import EventStorage
 
