@@ -92,7 +92,7 @@ class DAobjTwoStagePseudoLabGeneralizedRCNN(nn.Module):
         self.use_clip_c4 = use_clip_c4  # if True, use C4 mode where roi_head uses the last resnet layer from backbone
         self.use_clip_attpool = use_clip_attpool  # if True (C4+text_emb_as_classifier), use att_pool to replace default mean pool
 
-        self.projector = nn.Linear(30720, 256)
+        # self.projector = nn.Linear(30720, 256)
 
     @classmethod
     def from_config(cls, cfg):
