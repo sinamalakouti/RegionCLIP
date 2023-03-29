@@ -53,8 +53,8 @@ from detectron2.modeling import GeneralizedRCNNWithTTA, build_backbone
 # os.environ['CUDA_LAUNCH_BLOCKING'] = '1'
 import torch.multiprocessing
 
-from detectron2.modeling.backbone.clipcap.clipcap import ClipCaptionModel
-from detectron2.modeling.meta_arch.ensemble_model import EnsembleModel
+# from detectron2.modeling.backbone.clipcap.clipcap import ClipCaptionModel
+# from detectron2.modeling.meta_arch.ensemble_model import EnsembleModel
 from detectron2.structures import Instances, Boxes
 from detectron2.utils.events import EventStorage
 
@@ -170,19 +170,19 @@ class   ATeacherTrainer(DefaultTrainer):
 
         #clipcap model
 
-        self.clipcap_model = ClipCaptionModel(40, 40)
+        # self.clipcap_model = ClipCaptionModel(40, 40)
         # p = torch.load('/Users/sinamalakouti/Desktop/RegionCLIP/test-regionclip/transformer_weights_r50.pt', 'cpu')
         # p = torch.load('/projects/sina/RegionCLIP/pretrained_ckpt/transformer_r50_regionCLIP.pt', 'cpu')
         p = torch.load('/projects/sina/RegionCLIP/pretrained_ckpt/transformers_pretrained_RegionCLIP.pt' , 'cpu')
-        self.clipcap_model.load_state_dict(p)
+        # self.clipcap_model.load_state_dict(p)
         # self.clipcap_model.lm_head = self.clipcap_model.gpt.lm_head
         # self.clipcap_model.gpt.lm_head = Identity()
-        self.clipcap_model.gpt = None
-        self.clipcap_model.gpt = None
-        for p in self.clipcap_model.parameters():
-            p.requires_grad = False
-
-        self.offline_backbone = build_backbone(cfg)
+        # self.clipcap_model.gpt = None
+        # self.clipcap_model.gpt = None
+        # for p in self.clipcap_model.parameters():
+        #     p.requires_grad = False
+        #
+        # self.offline_backbone = build_backbone(cfg)
 
 
 
@@ -333,11 +333,11 @@ class   ATeacherTrainer(DefaultTrainer):
         with EventStorage(start_iter) as self.storage:
             try:
                 self.before_train()
-                print("loading offlinee backbone params")
-                self.offline_backbone.load_state_dict(self.model.module.backbone.state_dict())
-                for p in self.offline_backbone.parameters(): p.requires_grad = False
-                self.offline_backbone.eval()
-                print("OK. .. Done")
+                # print("loading offlinee backbone params")
+                # self.offline_backbone.load_state_dict(self.model.module.backbone.state_dict())
+                # for p in self.offline_backbone.parameters(): p.requires_grad = False
+                # self.offline_backbone.eval()
+                # print("OK. .. Done")
 
                 for self.iter in range(start_iter, max_iter):
                     self.before_step()
@@ -630,11 +630,11 @@ class   ATeacherTrainer(DefaultTrainer):
 
             all_domain_data = label_data_k
 
-            record_all_domain_data, _, _, _ = self.model(all_domain_data, branch="caption_consistency",
-                                                         clipcap_model=self.clipcap_model.to(self.model.device),
-                                                         offline_backbone=self.offline_backbone.to(self.model.device))
+            # record_all_domain_data, _, _, _ = self.model(all_domain_data, branch="caption_consistency",
+            #                                              clipcap_model=self.clipcap_model.to(self.model.device),
+            #                                              offline_backbone=self.offline_backbone.to(self.model.device))
 
-            record_dict.update(record_all_domain_data)
+            # record_dict.update(record_all_domain_data)
 
             # weight losses
             loss_dict = {}
