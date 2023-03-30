@@ -175,7 +175,7 @@ class CLIPRes5ROIHeads(ROIHeads):
                 the same `Instances` object, with extra
                 fields such as `pred_masks` or `pred_keypoints`.
         """
-        # assert not self.training
+        assert not self.training
         assert instances[0].has("pred_boxes") and instances[0].has("pred_classes")
 
         if self.mask_on:
@@ -733,7 +733,7 @@ class CLIPRes5ROIHeadsPseudoLab(ROIHeads):
                 the same `Instances` object, with extra
                 fields such as `pred_masks` or `pred_keypoints`.
         """
-        assert not self.training
+        # assert not self.training
         assert instances[0].has("pred_boxes") and instances[0].has("pred_classes")
 
         if self.mask_on:
