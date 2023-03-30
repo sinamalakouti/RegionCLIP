@@ -529,7 +529,7 @@ class ATeacherTrainer(DefaultTrainer):
 
         joint_features = student_features_trgt @ teach_features_src.t()
         n = len(joint_features)
-        ground_truth = torch.arange(n, dtype=torch.long, device=self.device)
+        ground_truth = torch.arange(n, dtype=torch.long, device=self.model.device)
 
         cont_loss = loss_fn(joint_features, ground_truth)
         losses = {}
