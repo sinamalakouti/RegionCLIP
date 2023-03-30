@@ -522,12 +522,12 @@ class ATeacherTrainer(DefaultTrainer):
         teach_features_src = torch.cat(GatherLayer.apply(teach_features_src), dim=0)
 
         student_features_trgt = student_features_trgt / student_features_trgt.norm(dim=1, keepdim=True)
-        teach_features_src = teach_features_src / teach_features_src.norm(dim=1, keepdim=True)
+        teach_features_src = teach_features_src / teach_features_src.norm(dim=1, keepdim=True).detach()
 
         from torch import nn
         loss_fn = nn.CrossEntropyLoss()
 
-        joint_features = student_features_trgt @ student_features_src.t()
+        joint_features = student_features_trgt @ teach_features_src.t()
         n = len(joint_features)
         ground_truth = torch.arange(n, dtype=torch.long, device=self.device)
 
