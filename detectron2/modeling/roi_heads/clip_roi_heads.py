@@ -565,9 +565,6 @@ class CLIPStandardROIHeads(ROIHeads):
         return self.mask_head(features, instances)
 
 
-
-
-
 @ROI_HEADS_REGISTRY.register()
 class CLIPRes5ROIHeadsPseudoLab(ROIHeads):
     """
