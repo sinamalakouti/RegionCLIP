@@ -490,17 +490,17 @@ class ATeacherTrainer(DefaultTrainer):
     def v2l_contrastive_loss(self, batched_inputs):
         # offline backbone on src
 
-        images_src, images_target = self.model.preprocess_image_caption_consistency(batched_inputsx)
+        images_src, images_target = self.model.module.preprocess_image_caption_consistency(batched_inputs)
         prefix_src = self.offline_backbone.attnpool(self.offline_backbone(images_src)['res5'])
         teacher_features = v2l(prefix_src, self.clipcap_model.to(self.device)).detach()
 
         # student backbone on target
-        student_prefix_trgt = self.model.backbone.attnpool(self.model.backbone(images_target)['res5'])
+        student_prefix_trgt = self.model.module.backbone.attnpool(self.model.module.backbone(images_target)['res5'])
         student_features_trgt = v2l(student_prefix_trgt, self.clipcap_model.to(self.device))
-        student_features_trgt = self.model.projector(student_features_trgt)
+        student_features_trgt = self.model.module.projector(student_features_trgt)
 
         # student backbone on src
-        student_prefix_src = self.model.backbone.attnpool(self.model.backbone(images_src)['res5'])
+        student_prefix_src = self.model.module.backbone.attnpool(self.model.module.backbone(images_src)['res5'])
         student_features_src = v2l(student_prefix_src, self.clipcap_model.to(self.device))
 
         # computing l1 loss ( knowledge distillation)
@@ -510,9 +510,9 @@ class ATeacherTrainer(DefaultTrainer):
 
         # teacher backbone on src
 
-        teach_prefix_src = self.model_teacher.backbone.attnpool(self.model_teacher.backbone(images_src)['res5'])
+        teach_prefix_src = self.model_teacher.module.backbone.attnpool(self.model_teacher.module.backbone(images_src)['res5'])
         teach_features_src = v2l(teach_prefix_src, self.clipcap_model.to(self.device))
-        teach_features_src = self.model_teacher.projector(teach_features_src).detach()
+        teach_features_src = self.model_teacher.module.projector(teach_features_src).detach()
 
         del images_src
         del images_target
