@@ -491,17 +491,17 @@ class ATeacherTrainer(DefaultTrainer):
         # offline backbone on src
 
         images_src, images_target = self.model.module.preprocess_image_caption_consistency(batched_inputs)
-        prefix_src = self.offline_backbone.attnpool(self.offline_backbone(images_src)['res5'])
-        teacher_features = v2l(prefix_src, self.clipcap_model.to(self.device)).detach()
+        prefix_src = self.offline_backbone.to(self.model.device).attnpool(self.offline_backbone.to(self.model.device)(images_src)['res5'])
+        teacher_features = v2l(prefix_src, self.clipcap_model.to(self.model.device)).detach()
 
         # student backbone on target
         student_prefix_trgt = self.model.module.backbone.attnpool(self.model.module.backbone(images_target)['res5'])
-        student_features_trgt = v2l(student_prefix_trgt, self.clipcap_model.to(self.device))
+        student_features_trgt = v2l(student_prefix_trgt, self.clipcap_model.to(self.model.device))
         student_features_trgt = self.model.module.projector(student_features_trgt)
 
         # student backbone on src
         student_prefix_src = self.model.module.backbone.attnpool(self.model.module.backbone(images_src)['res5'])
-        student_features_src = v2l(student_prefix_src, self.clipcap_model.to(self.device))
+        student_features_src = v2l(student_prefix_src, self.clipcap_model.to(self.model.device))
 
         # computing l1 loss ( knowledge distillation)
         l1_loss = torch.nn.L1Loss()
@@ -511,7 +511,7 @@ class ATeacherTrainer(DefaultTrainer):
         # teacher backbone on src
 
         teach_prefix_src = self.model_teacher.module.backbone.attnpool(self.model_teacher.module.backbone(images_src)['res5'])
-        teach_features_src = v2l(teach_prefix_src, self.clipcap_model.to(self.device))
+        teach_features_src = v2l(teach_prefix_src, self.clipcap_model.to(self.model.device))
         teach_features_src = self.model_teacher.module.projector(teach_features_src).detach()
 
         del images_src
