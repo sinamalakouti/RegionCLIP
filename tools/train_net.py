@@ -510,9 +510,9 @@ class ATeacherTrainer(DefaultTrainer):
 
         # teacher backbone on src
 
-        teach_prefix_src = self.model_teacher.module.backbone.attnpool(self.model_teacher.module.backbone(images_src)['res5'])
+        teach_prefix_src = self.model_teacher.backbone.attnpool(self.model_teacher.backbone(images_src)['res5'])
         teach_features_src = v2l(teach_prefix_src, self.clipcap_model.to(self.model.device))
-        teach_features_src = self.model_teacher.module.projector(teach_features_src).detach()
+        teach_features_src = self.model_teacher.projector(teach_features_src).detach()
 
         del images_src
         del images_target
