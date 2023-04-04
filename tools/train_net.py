@@ -333,11 +333,10 @@ class ATeacherTrainer(DefaultTrainer):
                 # for p in self.offline_backbone.parameters(): p.requires_grad = False
                 # self.offline_backbone.eval()
                 # print("OK. .. Done")
-
+                self.total_lossess = 0
                 for self.iter in range(start_iter, max_iter):
                     self.before_step()
                     # self.run_step_full_semisup()
-                    self.losses = {}
                     self.run_step_full_semisup_gradient_accumulation()
                     self.after_step()
             except Exception:
@@ -725,7 +724,7 @@ class ATeacherTrainer(DefaultTrainer):
         if self.iter >= self.cfg.SEMISUPNET.BURN_UP_STEP:
             # print("here" * 100)
             if self.iter % self.accum_iter == 0:
-                self.losses = 0
+                self.total_lossess = 0
                 del unlabel_data_q
                 del unlabel_data_k
                 del label_data_q
@@ -898,11 +897,11 @@ class ATeacherTrainer(DefaultTrainer):
         # losses.backward()
         print("lossesss issss ")
         print(losses)
-        self.losses += losses
+        self.total_lossess += losses
 
         if ((self.iter + 1) % self.accum_iter == 0) or (self.iter + 1 == self.max_iter):
             self.optimizer.zero_grad()
-            self.losses.backward()
+            self.total_lossess.backward()
             self.optimizer.step()
     @classmethod
     def build_test_loader(cls, cfg, dataset_name):
