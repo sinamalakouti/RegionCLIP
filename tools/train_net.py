@@ -753,7 +753,7 @@ class ATeacherTrainer(DefaultTrainer):
             losses = sum(loss_dict.values())
 
         else:
-            if self.iter == self.cfg.SEMISUPNET.BURN_UP_STEP:
+            if self.iter == self.cfg.SEMISUPNET.BURN_UP_STEP and False:
                 # update copy  the whole model
                 self._update_teacher_model(keep_rate=0.00)
                 # self.model.build_discriminator()
