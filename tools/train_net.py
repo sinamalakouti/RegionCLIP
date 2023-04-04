@@ -872,6 +872,24 @@ class ATeacherTrainer(DefaultTrainer):
 
                 record_dict.update(record_all_domain_data)
 
+            if self.iter % self.accum_iter == 1:
+                for i_index in range(len(unlabel_data_q)):
+                    # unlabel_data_item = {}
+                    for k, v in unlabel_data_k[i_index].items():
+                        # label_data_k[i_index][k + "_unlabeled"] = v
+                        unlabel_data_k[i_index][k + "_unlabeled"] = v
+                    # unlabel_data_k[i_index] = unlabel_data_item
+
+                all_domain_data = unlabel_data_k
+                #
+                # record_all_domain_data, _, _, _ = self.model(all_domain_data, branch="caption_consistency",
+                #                                              clipcap_model=self.clipcap_model.to(self.model.device),
+                #                                              offline_backbone=self.offline_backbone.to(self.model.device))
+
+                record_all_domain_data, _, _, _ = self.v2l_contrastive_loss(all_domain_data)
+
+                record_dict.update(record_all_domain_data)
+
             # weight losses
             loss_dict = {}
             for key in record_dict.keys():
