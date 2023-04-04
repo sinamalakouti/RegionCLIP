@@ -167,7 +167,7 @@ class ATeacherTrainer(DefaultTrainer):
         # model_teacher = self.build_model(cfg)
         # self.model_teacher = model_teacher
 
-        self.model_teacher = None 
+        self.model_teacher = None
 
         # clipcap model
 
@@ -193,7 +193,7 @@ class ATeacherTrainer(DefaultTrainer):
         )
 
         self.scheduler = self.build_lr_scheduler(cfg, optimizer)
-        ensem_ts_model = EnsembleModel(model_teacher, model)
+        # ensem_ts_model = EnsembleModel(model_teacher, model)
 
         self.checkpointer = DetectionCheckpointer(
             # Assume you want to save checkpoints together with logs/statistics
