@@ -334,7 +334,8 @@ class ATeacherTrainer(DefaultTrainer):
 
                 for self.iter in range(start_iter, max_iter):
                     self.before_step()
-                    self.run_step_full_semisup()
+                    # self.run_step_full_semisup()
+                    self.run_step_full_semisup_gradient_accumulation()
                     self.after_step()
             except Exception:
                 logger.exception("Exception during training:")
@@ -703,6 +704,187 @@ class ATeacherTrainer(DefaultTrainer):
         losses.backward()
         self.optimizer.step()
 
+
+
+    def run_step_full_semisup_gradient_accumulation(self):
+        self._trainer.iter = self.iter
+        self.accum_iter = 2
+        assert self.model.training, "[UBTeacherTrainer] model was changed to eval mode!"
+        start = time.perf_counter()
+        data = next(self._trainer._data_loader_iter)
+        # data_q and data_k from different augmentations (q:strong, k:weak)
+        # label_strong, label_weak, unlabed_strong, unlabled_weak
+        label_data_q, label_data_k, label_style_transfer, unlabel_data_q, unlabel_data_k, = data
+
+        if self.iter >= self.cfg.SEMISUPNET.BURN_UP_STEP:
+            if self.iter % self.accum_iter == 0:
+                del unlabel_data_q
+                del unlabel_data_k
+            else:
+                del label_data_q
+                del label_data_k
+                del label_style_transfer
+
+
+        data_time = time.perf_counter() - start
+
+        # burn-in stage (supervised training with labeled data)
+        if self.iter < self.cfg.SEMISUPNET.BURN_UP_STEP:
+
+            # input both strong and weak supervised data into model
+            label_data_q.extend(label_data_k)
+            record_dict, _, _, _ = self.model(
+                label_data_q, branch="supervised")
+
+            # weight losses
+            loss_dict = {}
+            for key in record_dict.keys():
+                if key[:4] == "loss":
+                    loss_dict[key] = record_dict[key] * 1
+            losses = sum(loss_dict.values())
+
+        else:
+            if self.iter == self.cfg.SEMISUPNET.BURN_UP_STEP:
+                # update copy  the whole model
+                self._update_teacher_model(keep_rate=0.00)
+                # self.model.build_discriminator()
+
+            elif (
+                    self.iter - self.cfg.SEMISUPNET.BURN_UP_STEP
+            ) % self.cfg.SEMISUPNET.TEACHER_UPDATE_ITER == 0  and self.iter % self.accum_iter == 0:
+                self._update_teacher_model(
+                    keep_rate=self.cfg.SEMISUPNET.EMA_KEEP_RATE)
+
+            record_dict = {}
+
+
+
+            if self.iter % self.accum_iter  == 1:
+                ######################## For probe #################################
+                # import pdb; pdb. set_trace()
+                gt_unlabel_k = self.get_label(unlabel_data_k)
+                # gt_unlabel_q = self.get_label_test(unlabel_data_q)
+                #  0. remove unlabeled data labels
+                unlabel_data_q = self.remove_label(unlabel_data_q)
+                unlabel_data_k = self.remove_label(unlabel_data_k)
+
+                #  1. generate the pseudo-label using teacher model
+                with torch.no_grad():
+                    (
+                        _,
+                        proposals_rpn_unsup_k,
+                        proposals_roih_unsup_k,
+                        _,
+                    ) = self.model_teacher(unlabel_data_k, branch="unsup_data_weak")
+
+                ######################## For probe #################################
+                # import pdb; pdb. set_trace()
+
+                # probe_metrics = ['compute_fp_gtoutlier', 'compute_num_box']
+                # probe_metrics = ['compute_num_box']
+                # analysis_pred, _ = self.probe.compute_num_box(gt_unlabel_k,proposals_roih_unsup_k,'pred')
+                # record_dict.update(analysis_pred)
+                ######################## For probe END #################################
+
+                #  2. Pseudo-labeling
+                cur_threshold = self.cfg.SEMISUPNET.BBOX_THRESHOLD
+
+                joint_proposal_dict = {}
+                joint_proposal_dict["proposals_rpn"] = proposals_rpn_unsup_k
+                # Process pseudo labels and thresholding
+                (
+                    pesudo_proposals_rpn_unsup_k,
+                    nun_pseudo_bbox_rpn,
+                ) = self.process_pseudo_label(
+                    proposals_rpn_unsup_k, cur_threshold, "rpn", "thresholding"
+                )
+                # analysis_pred, _ = self.probe.compute_num_box(gt_unlabel_k,pesudo_proposals_rpn_unsup_k,'pred',True)
+                # record_dict.update(analysis_pred)
+
+                joint_proposal_dict["proposals_pseudo_rpn"] = pesudo_proposals_rpn_unsup_k
+                # Pseudo_labeling for ROI head (bbox location/objectness)
+                pesudo_proposals_roih_unsup_k, _ = self.process_pseudo_label(
+                    proposals_roih_unsup_k, cur_threshold, "roih", "thresholding"
+                )
+                joint_proposal_dict["proposals_pseudo_roih"] = pesudo_proposals_roih_unsup_k
+
+                # 3. add pseudo-label to unlabeled data
+
+                unlabel_data_q = self.add_label(
+                    unlabel_data_q, joint_proposal_dict["proposals_pseudo_roih"]
+                )
+                unlabel_data_k = self.add_label(
+                    unlabel_data_k, joint_proposal_dict["proposals_pseudo_roih"]
+                )
+
+                all_unlabel_data = unlabel_data_q
+
+            # 4. input both strongly and weakly augmented labeled data into student model
+
+            if self.iter % self.accum_iter == 0:
+                all_label_data = label_data_q + label_data_k
+
+                record_all_label_data, _, _, _ = self.model(
+                    all_label_data, branch="supervised"
+                )
+                record_dict.update(record_all_label_data)
+            if self.iter % self.accum_iter == 1:
+                # 5. input strongly augmented unlabeled data into model
+                record_all_unlabel_data, _, _, _ = self.model(
+                    all_unlabel_data, branch="supervised_target"
+                )
+                new_record_all_unlabel_data = {}
+                for key in record_all_unlabel_data.keys():
+                    new_record_all_unlabel_data[key + "_pseudo"] = record_all_unlabel_data[
+                        key
+                    ]
+                record_dict.update(new_record_all_unlabel_data)
+
+            # 6. input weakly labeled data (source) and styled transfer version of the source data ( weak augmentation) to do consistency training
+            if self.iter % self.accum_iter == 0:
+                for i_index in range(len(label_style_transfer)):
+                    # unlabel_data_item = {}
+                    for k, v in label_style_transfer[i_index].items():
+                        # label_data_k[i_index][k + "_unlabeled"] = v
+                        label_data_k[i_index][k + "_unlabeled"] = v
+                    # unlabel_data_k[i_index] = unlabel_data_item
+
+                all_domain_data = label_data_k
+                #
+                # record_all_domain_data, _, _, _ = self.model(all_domain_data, branch="caption_consistency",
+                #                                              clipcap_model=self.clipcap_model.to(self.model.device),
+                #                                              offline_backbone=self.offline_backbone.to(self.model.device))
+
+                record_all_domain_data, _, _, _= self.v2l_contrastive_loss(all_domain_data)
+
+                record_dict.update(record_all_domain_data)
+
+            # weight losses
+            loss_dict = {}
+            for key in record_dict.keys():
+                if key.startswith("loss"):
+                    if key == "loss_rpn_loc_pseudo" or key == "loss_box_reg_pseudo":
+                        # pseudo bbox regression <- 0
+                        loss_dict[key] = record_dict[key] * 0
+                    elif key[-6:] == "pseudo":  # unsupervised loss
+                        loss_dict[key] = (
+                                record_dict[key] * 1
+                            # self.cfg.SEMISUPNET.UNSUP_LOSS_WEIGHT
+                        )
+                    else:  # supervised loss
+                        loss_dict[key] = record_dict[key] * 1
+
+            losses = sum(loss_dict.values())
+
+        metrics_dict = record_dict
+        metrics_dict["data_time"] = data_time
+        self._write_metrics(metrics_dict)
+        losses.backward()
+
+        if ((self.iter + 1) % self.accum_iter == 0) or (self.iter + 1 == self.max_iter):
+            self.optimizer.zero_grad()
+            # losses.backward()
+            self.optimizer.step()
     @classmethod
     def build_test_loader(cls, cfg, dataset_name):
         return build_detection_test_loader(cfg, dataset_name)
