@@ -510,7 +510,7 @@ class ATeacherTrainer(DefaultTrainer):
 
         kd_loss = l1_loss(teacher_features, student_features_src)
 
-        student_features_src = self.model.module.projector(student_prefix_src)
+        student_features_src = self.model.module.projector(student_features_src)
 
         # ema_student backbone on src
 
