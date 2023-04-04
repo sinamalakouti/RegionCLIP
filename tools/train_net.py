@@ -719,6 +719,7 @@ class ATeacherTrainer(DefaultTrainer):
         label_data_q, label_data_k, label_style_transfer, unlabel_data_q, unlabel_data_k, = data
 
         if self.iter >= self.cfg.SEMISUPNET.BURN_UP_STEP:
+            print("here * 100")
             if self.iter % self.accum_iter == 0:
                 del unlabel_data_q
                 del unlabel_data_k
