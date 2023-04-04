@@ -895,11 +895,11 @@ class ATeacherTrainer(DefaultTrainer):
         # losses.backward()
         # print("lossesss issss ")
         # print(losses)
-        self.total_lossess += losses
-
+        # self.total_lossess += losses
+        losses.backward()
         if ((self.iter + 1) % self.accum_iter == 0) or (self.iter + 1 == self.max_iter):
             self.optimizer.zero_grad()
-            self.total_lossess.backward()
+            # self.total_lossess.backward()
             self.optimizer.step()
     @classmethod
     def build_test_loader(cls, cfg, dataset_name):
