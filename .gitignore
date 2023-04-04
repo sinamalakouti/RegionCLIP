@@ -71,3 +71,6 @@ _darcs
 *.yaml
 *.yaml
 configs/VOC-Experiments/faster_rcnn_CLIP_R_50_C4.yaml
+.DS_Store
+configs/.DS_Store
+configs/VOC-Experiments/.DS_Store
