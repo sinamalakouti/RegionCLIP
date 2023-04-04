@@ -725,6 +725,7 @@ class ATeacherTrainer(DefaultTrainer):
             if self.iter % self.accum_iter == 0:
                 del unlabel_data_q
                 del unlabel_data_k
+                del label_data_q
                 # self.model_teacher = self.model_teacher.to('cpu')
             else:
                 del label_data_q
@@ -837,10 +838,10 @@ class ATeacherTrainer(DefaultTrainer):
                 print("heree1111" *20)
                 GPUtil.showUtilization()
                 record_all_label_data, _, _, _ = self.model(
-                    label_data_q + label_data_k, branch="supervised"
+                 label_data_k, branch="supervised"
                 )
                 record_dict.update(record_all_label_data)
-                del label_data_q
+                # del label_data_q
             if self.iter % self.accum_iter == 1:
                 # 5. input strongly augmented unlabeled data into model
                 record_all_unlabel_data, _, _, _ = self.model(
