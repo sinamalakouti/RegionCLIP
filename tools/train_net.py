@@ -720,10 +720,12 @@ class ATeacherTrainer(DefaultTrainer):
             if self.iter % self.accum_iter == 0:
                 del unlabel_data_q
                 del unlabel_data_k
+                self.model_teacher = self.model_teacher.to('cpu')
             else:
                 del label_data_q
                 del label_data_k
                 del label_style_transfer
+                self.model_teacher = self.model_teacher.to(self.model.device)
 
 
         data_time = time.perf_counter() - start
