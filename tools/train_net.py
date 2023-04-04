@@ -831,13 +831,14 @@ class ATeacherTrainer(DefaultTrainer):
             if self.iter % self.accum_iter == 0:
 
                 GPUtil.showUtilization()
-                all_label_data = label_data_q + label_data_k
+                # all_label_data = label_data_q + label_data_k
                 print("heree1111" *20)
                 GPUtil.showUtilization()
                 record_all_label_data, _, _, _ = self.model(
-                    all_label_data, branch="supervised"
+                    label_data_q + label_data_k, branch="supervised"
                 )
                 record_dict.update(record_all_label_data)
+                del label_data_q
             if self.iter % self.accum_iter == 1:
                 # 5. input strongly augmented unlabeled data into model
                 record_all_unlabel_data, _, _, _ = self.model(
