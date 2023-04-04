@@ -898,7 +898,7 @@ class ATeacherTrainer(DefaultTrainer):
         # print("lossesss issss ")
         # print(losses)
         # self.total_lossess += losses
-        losses.backward()
+        # losses.backward()
         # if ((self.iter + 1) % self.accum_iter == 0) or (self.iter + 1 == self.max_iter):
         #     self.optimizer.zero_grad()
             # self.total_lossess.backward()
