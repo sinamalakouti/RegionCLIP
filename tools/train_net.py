@@ -836,8 +836,6 @@ class ATeacherTrainer(DefaultTrainer):
             if self.iter % self.accum_iter == 0:
                 GPUtil.showUtilization()
                 # all_label_data = label_data_q + label_data_k
-                print("heree1111" *20)
-                GPUtil.showUtilization()
                 record_all_label_data, _, _, _ = self.model(
                  label_data_k, branch="supervised"
                 )
@@ -895,8 +893,8 @@ class ATeacherTrainer(DefaultTrainer):
         metrics_dict["data_time"] = data_time
         self._write_metrics(metrics_dict)
         # losses.backward()
-        print("lossesss issss ")
-        print(losses)
+        # print("lossesss issss ")
+        # print(losses)
         self.total_lossess += losses
 
         if ((self.iter + 1) % self.accum_iter == 0) or (self.iter + 1 == self.max_iter):
