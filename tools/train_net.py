@@ -514,9 +514,9 @@ class ATeacherTrainer(DefaultTrainer):
 
         # ema_student backbone on src
 
-        teach_prefix_src = self.model_teacher.backbone.attnpool(self.model_teacher.backbone(images_src)['res5'])
-        teach_features_src = v2l(teach_prefix_src, self.clipcap_model.to(self.model.device))
-        teach_features_src = self.model_teacher.projector(teach_features_src).detach()
+        # teach_prefix_src = self.model_teacher.backbone.attnpool(self.model_teacher.backbone(images_src)['res5'])
+        # teach_features_src = v2l(teach_prefix_src, self.clipcap_model.to(self.model.device))
+        # teach_features_src = self.model_teacher.projector(teach_features_src).detach()
 
         del images_src
         del images_target
@@ -525,6 +525,7 @@ class ATeacherTrainer(DefaultTrainer):
         student_features_trgt = torch.cat(GatherLayer.apply(student_features_trgt), dim=0)
         # teach_features_src = torch.cat(GatherLayer.apply(teach_features_src), dim=0)
         student_features_src = torch.cat(GatherLayer.apply(student_features_src), dim=0)
+
         student_features_trgt = student_features_trgt / student_features_trgt.norm(dim=1, keepdim=True)
         student_features_src = student_features_src / student_features_src.norm(dim=1, keepdim=True)
 
@@ -863,11 +864,11 @@ class ATeacherTrainer(DefaultTrainer):
 
                 all_domain_data = label_data_k
                 #
-                # record_all_domain_data, _, _, _ = self.model(all_domain_data, branch="caption_consistency",
-                #                                              clipcap_model=self.clipcap_model.to(self.model.device),
-                #                                              offline_backbone=self.offline_backbone.to(self.model.device))
+                record_all_domain_data, _, _, _ = self.model(all_domain_data, branch="caption_consistency",
+                                                             clipcap_model=self.clipcap_model.to(self.model.device),
+                                                             offline_backbone=self.offline_backbone.to(self.model.device))
 
-                record_all_domain_data, _, _, _= self.v2l_contrastive_loss(all_domain_data)
+                # record_all_domain_data, _, _, _= self.v2l_contrastive_loss(all_domain_data)
 
                 record_dict.update(record_all_domain_data)
 
@@ -881,11 +882,11 @@ class ATeacherTrainer(DefaultTrainer):
 
                 all_domain_data = unlabel_data_k
                 #
-                # record_all_domain_data, _, _, _ = self.model(all_domain_data, branch="caption_consistency",
-                #                                              clipcap_model=self.clipcap_model.to(self.model.device),
-                #                                              offline_backbone=self.offline_backbone.to(self.model.device))
+                record_all_domain_data, _, _, _ = self.model(all_domain_data, branch="caption_consistency",
+                                                             clipcap_model=self.clipcap_model.to(self.model.device),
+                                                             offline_backbone=self.offline_backbone.to(self.model.device))
 
-                record_all_domain_data, _, _, _ = self.v2l_contrastive_loss(all_domain_data)
+                # record_all_domain_data, _, _, _ = self.v2l_contrastive_loss(all_domain_data)
                 for key in record_all_domain_data:
                     record_dict[key + "_pseudo"] = record_all_domain_data[key]
                 record_dict.update(record_all_domain_data)
