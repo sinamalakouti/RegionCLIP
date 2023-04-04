@@ -732,7 +732,7 @@ class ATeacherTrainer(DefaultTrainer):
         else:
             print("noo" * 100)
 
-
+        torch.cuda.empty_cache()
         data_time = time.perf_counter() - start
 
         # burn-in stage (supervised training with labeled data)
