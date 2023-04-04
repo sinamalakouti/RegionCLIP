@@ -164,10 +164,10 @@ class ATeacherTrainer(DefaultTrainer):
         optimizer = self.build_optimizer(cfg, model)
 
         # create an teacher model
-        # model_teacher = self.build_model(cfg)
-        # self.model_teacher = model_teacher
+        model_teacher = self.build_model(cfg)
+        self.model_teacher = model_teacher
 
-        self.model_teacher = None
+
 
         # clipcap model
 
@@ -193,7 +193,7 @@ class ATeacherTrainer(DefaultTrainer):
         )
 
         self.scheduler = self.build_lr_scheduler(cfg, optimizer)
-        # ensem_ts_model = EnsembleModel(model_teacher, model)
+        ensem_ts_model = EnsembleModel(model_teacher, model)
 
         self.checkpointer = DetectionCheckpointer(
             # Assume you want to save checkpoints together with logs/statistics
@@ -492,8 +492,9 @@ class ATeacherTrainer(DefaultTrainer):
 
     def v2l_contrastive_loss(self, batched_inputs):
         # offline backbone on src
-        # self.model_teacher = self.model_teacher.to(self.model.device)
+        self.model_teacher = self.model_teacher.to(self.model.device)
         images_src, images_target = self.model.module.preprocess_image_caption_consistency(batched_inputs)
+
         # prefix_src = self.offline_backbone.to(self.model.device).attnpool(self.offline_backbone.to(self.model.device)(images_src)['res5'])
         # teacher_features = v2l(prefix_src, self.clipcap_model.to(self.model.device)).detach()
 
@@ -726,12 +727,12 @@ class ATeacherTrainer(DefaultTrainer):
                 del unlabel_data_q
                 del unlabel_data_k
                 del label_data_q
-                # self.model_teacher = self.model_teacher.to('cpu')
+                self.model_teacher = self.model_teacher.to('cpu')
             else:
                 del label_data_q
                 del label_data_k
                 del label_style_transfer
-                # self.model_teacher = self.model_teacher.to(self.model.device)
+                self.model_teacher = self.model_teacher.to(self.model.device)
         else:
             print("noo" * 100)
 
