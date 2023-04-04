@@ -707,7 +707,7 @@ class ATeacherTrainer(DefaultTrainer):
 
 
     def run_step_full_semisup_gradient_accumulation(self):
-        torch.cuda.empy_cache()
+        torch.cuda.empty_cache()
 
         self._trainer.iter = self.iter
         self.accum_iter = 2
