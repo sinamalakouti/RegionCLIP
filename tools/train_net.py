@@ -896,6 +896,8 @@ class ATeacherTrainer(DefaultTrainer):
         metrics_dict["data_time"] = data_time
         self._write_metrics(metrics_dict)
         # losses.backward()
+        print("lossesss issss ")
+        print(losses)
         self.losses += losses
 
         if ((self.iter + 1) % self.accum_iter == 0) or (self.iter + 1 == self.max_iter):
