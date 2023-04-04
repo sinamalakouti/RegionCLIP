@@ -875,7 +875,7 @@ class ATeacherTrainer(DefaultTrainer):
             if self.iter % self.accum_iter == 1:
                 for i_index in range(len(unlabel_data_q)):
                     # unlabel_data_item = {}
-                    for k, v in unlabel_data_k[i_index].items():
+                    for k, v in unlabel_data_q[i_index].items():
                         # label_data_k[i_index][k + "_unlabeled"] = v
                         unlabel_data_k[i_index][k + "_unlabeled"] = v
                     # unlabel_data_k[i_index] = unlabel_data_item
