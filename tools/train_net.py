@@ -885,7 +885,8 @@ class ATeacherTrainer(DefaultTrainer):
                 #                                              offline_backbone=self.offline_backbone.to(self.model.device))
 
                 record_all_domain_data, _, _, _ = self.v2l_contrastive_loss(all_domain_data)
-
+                for key in record_all_domain_data:
+                    record_dict[key + "_pseudo"] = record_all_domain_data[key]
                 record_dict.update(record_all_domain_data)
 
             # weight losses
