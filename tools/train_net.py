@@ -185,7 +185,7 @@ class ATeacherTrainer(DefaultTrainer):
 
         # self.offline_backbone = build_backbone(cfg)
 
-        model = create_ddp_model(model, broadcast_buffers=False, find_unused_parameters=True)
+        model = create_ddp_model(model, broadcast_buffers=False)
 
         TrainerBase.__init__(self)
         self._trainer = (AMPTrainer if cfg.SOLVER.AMP.ENABLED else SimpleTrainer)(
