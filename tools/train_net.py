@@ -178,11 +178,10 @@ class ATeacherTrainer(DefaultTrainer):
         # self.clipcap_model.lm_head = self.clipcap_model.gpt.lm_head
         # self.clipcap_model.gpt.lm_head = Identity()
         self.clipcap_model.gpt = None
-        self.clipcap_model.gpt = None
         for p in self.clipcap_model.parameters():
             p.requires_grad = False
 
-        # self.offline_backbone = build_backbone(cfg)
+        self.offline_backbone = build_backbone(cfg)
 
         model = create_ddp_model(model, broadcast_buffers=False)
 
@@ -328,10 +327,10 @@ class ATeacherTrainer(DefaultTrainer):
             try:
                 self.before_train()
                 print("loading offlinee backbone params")
-                # self.offline_backbone.load_state_dict(self.model.module.backbone.state_dict())
-                # for p in self.offline_backbone.parameters(): p.requires_grad = False
-                # self.offline_backbone.eval()
-                # print("OK. .. Done")
+                self.offline_backbone.load_state_dict(self.model.module.backbone.state_dict())
+                for p in self.offline_backbone.parameters(): p.requires_grad = False
+                self.offline_backbone.eval()
+                print("OK. .. Done")
                 self.total_lossess = 0
                 for self.iter in range(start_iter, max_iter):
                     self.before_step()
@@ -494,8 +493,8 @@ class ATeacherTrainer(DefaultTrainer):
         self.model_teacher = self.model_teacher.to(self.model.device)
         images_src, images_target = self.model.module.preprocess_image_caption_consistency(batched_inputs)
 
-        # prefix_src = self.offline_backbone.to(self.model.device).attnpool(self.offline_backbone.to(self.model.device)(images_src)['res5'])
-        # teacher_features = v2l(prefix_src, self.clipcap_model.to(self.model.device)).detach()
+        prefix_src = self.offline_backbone.to(self.model.device).attnpool(self.offline_backbone.to(self.model.device)(images_src)['res5'])
+        teacher_features = v2l(prefix_src, self.clipcap_model.to(self.model.device)).detach()
 
         # student backbone on target
         student_prefix_trgt = self.model.module.backbone.attnpool(self.model.module.backbone(images_target)['res5'])
@@ -507,11 +506,13 @@ class ATeacherTrainer(DefaultTrainer):
         student_features_src = v2l(student_prefix_src, self.clipcap_model.to(self.model.device))
 
         # computing l1 loss ( knowledge distillation)
-        # l1_loss = torch.nn.L1Loss()
+        l1_loss = torch.nn.L1Loss()
 
-        # kd_loss = l1_loss(teacher_features, student_features_src)
+        kd_loss = l1_loss(teacher_features, student_features_src)
 
-        # teacher backbone on src
+        student_features_src = self.model.module.projector(student_prefix_src)
+
+        # ema_student backbone on src
 
         teach_prefix_src = self.model_teacher.backbone.attnpool(self.model_teacher.backbone(images_src)['res5'])
         teach_features_src = v2l(teach_prefix_src, self.clipcap_model.to(self.model.device))
@@ -522,22 +523,22 @@ class ATeacherTrainer(DefaultTrainer):
 
         from detectron2.modeling.backbone.clipcap.gather import GatherLayer
         student_features_trgt = torch.cat(GatherLayer.apply(student_features_trgt), dim=0)
-        teach_features_src = torch.cat(GatherLayer.apply(teach_features_src), dim=0)
-
+        # teach_features_src = torch.cat(GatherLayer.apply(teach_features_src), dim=0)
+        student_features_src = torch.cat(GatherLayer.apply(student_features_src), dim=0)
         student_features_trgt = student_features_trgt / student_features_trgt.norm(dim=1, keepdim=True)
-        teach_features_src = teach_features_src / teach_features_src.norm(dim=1, keepdim=True).detach()
+        student_features_src = student_features_src / student_features_src.norm(dim=1, keepdim=True)
 
         from torch import nn
         loss_fn = nn.CrossEntropyLoss()
 
-        joint_features = student_features_trgt @ teach_features_src.t()
+        joint_features = student_features_trgt @ student_features_src.t()
         n = len(joint_features)
         ground_truth = torch.arange(n, dtype=torch.long, device=self.model.device)
 
         cont_loss = loss_fn(joint_features, ground_truth)
         losses = {}
         losses['loss_cont'] = cont_loss
-        # losses['loss_kd'] = kd_loss
+        losses['loss_kd'] = kd_loss
 
         return losses, [], [], None
 
