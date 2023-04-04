@@ -892,15 +892,17 @@ class ATeacherTrainer(DefaultTrainer):
         metrics_dict = record_dict
         metrics_dict["data_time"] = data_time
         self._write_metrics(metrics_dict)
-        # losses.backward()
+        self.optimizer.zero_grad()
+        losses.backward()
+        self.optimizer.step()
         # print("lossesss issss ")
         # print(losses)
         # self.total_lossess += losses
         losses.backward()
-        if ((self.iter + 1) % self.accum_iter == 0) or (self.iter + 1 == self.max_iter):
-            self.optimizer.zero_grad()
+        # if ((self.iter + 1) % self.accum_iter == 0) or (self.iter + 1 == self.max_iter):
+        #     self.optimizer.zero_grad()
             # self.total_lossess.backward()
-            self.optimizer.step()
+            # self.optimizer.step()
     @classmethod
     def build_test_loader(cls, cfg, dataset_name):
         return build_detection_test_loader(cfg, dataset_name)
