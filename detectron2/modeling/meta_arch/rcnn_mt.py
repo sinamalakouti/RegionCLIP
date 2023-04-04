@@ -94,6 +94,12 @@ class DAobjTwoStagePseudoLabGeneralizedRCNN(nn.Module):
 
         self.projector = nn.Linear(30720, 256)
 
+        self.projector = nn.Sequential(
+            nn.Linear(30720, 30720, bias=False),
+            nn.ReLU(),
+            nn.Linear(30720, 256, bias=False),
+        )
+
     @classmethod
     def from_config(cls, cfg):
         backbone = build_backbone(cfg)
