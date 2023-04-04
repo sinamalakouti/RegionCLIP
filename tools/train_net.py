@@ -336,8 +336,9 @@ class ATeacherTrainer(DefaultTrainer):
 
                 for self.iter in range(start_iter, max_iter):
                     self.before_step()
-                    self.run_step_full_semisup()
-                    # self.run_step_full_semisup_gradient_accumulation()
+                    # self.run_step_full_semisup()
+                    self.losses = {}
+                    self.run_step_full_semisup_gradient_accumulation()
                     self.after_step()
             except Exception:
                 logger.exception("Exception during training:")
@@ -550,8 +551,6 @@ class ATeacherTrainer(DefaultTrainer):
         # data_q and data_k from different augmentations (q:strong, k:weak)
         # label_strong, label_weak, unlabed_strong, unlabled_weak
         label_data_q, label_data_k, label_style_transfer, unlabel_data_q, unlabel_data_k, = data
-
-        del label_data_q
         # print("checkking the length of all dataa")
         # print(len(label_data_k))
         # print(len(label_style_transfer))
@@ -645,8 +644,7 @@ class ATeacherTrainer(DefaultTrainer):
                 unlabel_data_k, joint_proposal_dict["proposals_pseudo_roih"]
             )
 
-            # all_label_data = label_data_q + label_data_k
-            all_label_data = label_data_k
+            all_label_data = label_data_q + label_data_k
             all_unlabel_data = unlabel_data_q
 
             # 4. input both strongly and weakly augmented labeled data into student model
@@ -727,6 +725,7 @@ class ATeacherTrainer(DefaultTrainer):
         if self.iter >= self.cfg.SEMISUPNET.BURN_UP_STEP:
             # print("here" * 100)
             if self.iter % self.accum_iter == 0:
+                self.losses = 0
                 del unlabel_data_q
                 del unlabel_data_k
                 del label_data_q
@@ -896,11 +895,12 @@ class ATeacherTrainer(DefaultTrainer):
         metrics_dict = record_dict
         metrics_dict["data_time"] = data_time
         self._write_metrics(metrics_dict)
-        losses.backward()
+        # losses.backward()
+        self.losses += losses
 
         if ((self.iter + 1) % self.accum_iter == 0) or (self.iter + 1 == self.max_iter):
             self.optimizer.zero_grad()
-            # losses.backward()
+            self.losses.backward()
             self.optimizer.step()
     @classmethod
     def build_test_loader(cls, cfg, dataset_name):
