@@ -490,7 +490,7 @@ class ATeacherTrainer(DefaultTrainer):
 
     def v2l_contrastive_loss(self, batched_inputs):
         # offline backbone on src
-
+        self.model_teacher = self.model_teacher.to(self.model.device)
         images_src, images_target = self.model.module.preprocess_image_caption_consistency(batched_inputs)
         # prefix_src = self.offline_backbone.to(self.model.device).attnpool(self.offline_backbone.to(self.model.device)(images_src)['res5'])
         # teacher_features = v2l(prefix_src, self.clipcap_model.to(self.model.device)).detach()
