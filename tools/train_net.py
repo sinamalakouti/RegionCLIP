@@ -824,6 +824,8 @@ class ATeacherTrainer(DefaultTrainer):
             # 4. input both strongly and weakly augmented labeled data into student model
 
             if self.iter % self.accum_iter == 0:
+                import GPUtil
+                GPUtil.showUtilization()
                 all_label_data = label_data_q + label_data_k
 
                 record_all_label_data, _, _, _ = self.model(
