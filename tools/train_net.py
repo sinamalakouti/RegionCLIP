@@ -719,7 +719,7 @@ class ATeacherTrainer(DefaultTrainer):
         label_data_q, label_data_k, label_style_transfer, unlabel_data_q, unlabel_data_k, = data
 
         if self.iter >= self.cfg.SEMISUPNET.BURN_UP_STEP:
-            print("here" * 100)
+            # print("here" * 100)
             if self.iter % self.accum_iter == 0:
                 del unlabel_data_q
                 del unlabel_data_k
@@ -832,7 +832,8 @@ class ATeacherTrainer(DefaultTrainer):
 
                 GPUtil.showUtilization()
                 all_label_data = label_data_q + label_data_k
-
+                print("heree1111" *20)
+                GPUtil.showUtilization()
                 record_all_label_data, _, _, _ = self.model(
                     all_label_data, branch="supervised"
                 )
