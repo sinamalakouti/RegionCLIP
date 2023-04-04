@@ -394,7 +394,7 @@ class ATeacherTrainer(DefaultTrainer):
         for key, value in self.model_teacher.state_dict().items():
             if key in student_model_dict.keys():
                 new_teacher_dict[key] = (
-                        student_model_dict[key] *
+                        student_model_dict[key].to(value.device) *
                         (1 - keep_rate) + value * keep_rate
                 )
             else:
