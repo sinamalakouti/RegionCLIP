@@ -164,8 +164,10 @@ class ATeacherTrainer(DefaultTrainer):
         optimizer = self.build_optimizer(cfg, model)
 
         # create an teacher model
-        model_teacher = self.build_model(cfg)
-        self.model_teacher = model_teacher
+        # model_teacher = self.build_model(cfg)
+        # self.model_teacher = model_teacher
+
+        self.model_teacher = None 
 
         # clipcap model
 
@@ -490,7 +492,7 @@ class ATeacherTrainer(DefaultTrainer):
 
     def v2l_contrastive_loss(self, batched_inputs):
         # offline backbone on src
-        self.model_teacher = self.model_teacher.to(self.model.device)
+        # self.model_teacher = self.model_teacher.to(self.model.device)
         images_src, images_target = self.model.module.preprocess_image_caption_consistency(batched_inputs)
         # prefix_src = self.offline_backbone.to(self.model.device).attnpool(self.offline_backbone.to(self.model.device)(images_src)['res5'])
         # teacher_features = v2l(prefix_src, self.clipcap_model.to(self.model.device)).detach()
@@ -723,12 +725,12 @@ class ATeacherTrainer(DefaultTrainer):
             if self.iter % self.accum_iter == 0:
                 del unlabel_data_q
                 del unlabel_data_k
-                self.model_teacher = self.model_teacher.to('cpu')
+                # self.model_teacher = self.model_teacher.to('cpu')
             else:
                 del label_data_q
                 del label_data_k
                 del label_style_transfer
-                self.model_teacher = self.model_teacher.to(self.model.device)
+                # self.model_teacher = self.model_teacher.to(self.model.device)
         else:
             print("noo" * 100)
 
@@ -758,7 +760,7 @@ class ATeacherTrainer(DefaultTrainer):
 
             elif (
                     self.iter - self.cfg.SEMISUPNET.BURN_UP_STEP
-            ) % self.cfg.SEMISUPNET.TEACHER_UPDATE_ITER == 0  and self.iter % self.accum_iter == 0:
+            ) % self.cfg.SEMISUPNET.TEACHER_UPDATE_ITER == 0  and self.iter % self.accum_iter == 0 and False:
                 self._update_teacher_model(
                     keep_rate=self.cfg.SEMISUPNET.EMA_KEEP_RATE)
 
