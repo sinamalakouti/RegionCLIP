@@ -481,7 +481,7 @@ class DatasetMapperTwoCropSeparate(DatasetMapper):
         else:
             sem_seg_gt = None
 
-        aug_input = T.StandardAugInput(image, sem_seg=sem_seg_gt)
+        aug_input = T.AugInput(image, sem_seg=sem_seg_gt)
         transforms = aug_input.apply_augmentations(self.augmentation)
         image_weak_aug, sem_seg_gt = aug_input.image, aug_input.sem_seg
 
