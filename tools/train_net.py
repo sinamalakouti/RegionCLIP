@@ -45,7 +45,7 @@ from detectron2.evaluation import (
 )
 
 from detectron2.engine.defaults import create_ddp_model
-
+from detectron2.data.detection_utils import exp_rampup
 from detectron2.modeling import GeneralizedRCNNWithTTA, build_backbone
 
 # os.environ['CUDA_VISIBLE_DEVICES'] = "2"
@@ -904,8 +904,12 @@ class ATeacherTrainer(DefaultTrainer):
                                 record_dict[key] * 1
                             # self.cfg.SEMISUPNET.UNSUP_LOSS_WEIGHT
                         )
+                    elif 'cont' in key or 'kd' in key:
+                        weight =  exp_rampup(self.iter, rampup_length=200000)
+                        loss_dict[key] = loss_dict[key] * weight
                     else:  # supervised loss
                         loss_dict[key] = record_dict[key] * 1
+
 
             losses = sum(loss_dict.values())
 
