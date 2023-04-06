@@ -907,6 +907,8 @@ class ATeacherTrainer(DefaultTrainer):
                     elif 'cont' in key or 'kd' in key:
                         weight =  exp_rampup(self.iter, rampup_length=200000)
                         loss_dict[key] = record_dict[key] * weight
+                    elif key == 'loss_cont_pseudo':
+                        loss_dict[key] = record_dict['loss_cont_pseudo'] *0.0
                     else:  # supervised loss
                         loss_dict[key] = record_dict[key] * 1
 
