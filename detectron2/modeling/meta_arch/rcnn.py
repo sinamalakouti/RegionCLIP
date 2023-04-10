@@ -378,6 +378,15 @@ class GeneralizedRCNN(nn.Module):
 
             # 3. get features of corrosponding regions
             src_features, target_features = self.roi_heads.forward_get_features(src_features, target_features, proposals_rpn, targets=gt_instances, res5=self.backbone.layer4, attnpool=self.backbone.attnpool)
+
+
+            # 4. project to the language domain
+
+            src_features = v2l(src_features, clipcap_model.to(self.device))
+            src_features = self.projector(src_features)
+
+            target_features = v2l(target_features, clipcap_model.to(self.device))
+            target_features = self.projector(target_features)
             # 4. move all features to the same device ?
 
             src_features = torch.cat(GatherLayer.apply(src_features), dim=0)
