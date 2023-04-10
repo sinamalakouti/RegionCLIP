@@ -154,9 +154,7 @@ class CLIPRes5ROIHeads(ROIHeads):
             # print("attenpol"*100)
             # print(box_features.shape)
             # print(att_feats.shape)
-            predictions = self.box_predictor(
-
-            )
+            predictions = self.box_predictor(att_feats)
         else:  # mean pooling
             predictions = self.box_predictor(box_features.mean(dim=[2, 3]))
 
