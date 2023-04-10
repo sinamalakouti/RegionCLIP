@@ -376,6 +376,9 @@ class GeneralizedRCNN(nn.Module):
                 # todo: should I set the with toch.grad to false?
                 proposals_rpn, _ = self.proposal_generator(images_src, src_features, gt_instances)
 
+                rand_inds = [torch.randperm(len(p))[:128].to(self.device) for p in proposals_rpn]
+                proposals_rpn = [p[rand_inds[i]] for i, p in enumerate(proposals_rpn)]
+
             # 3. get features of corrosponding regions
             src_features, target_features = self.roi_heads.forward_get_features(src_features, target_features, proposals_rpn, targets=gt_instances, res5=self.backbone.layer4, attnpool=self.backbone.attnpool)
 
