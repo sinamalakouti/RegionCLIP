@@ -364,8 +364,8 @@ class GeneralizedRCNN(nn.Module):
             images_src, images_target = self.preprocess_image_caption_consistency_regionLevel(batched_inputs)
 
             # 1. get backbone output
-            src_features = self.backbone(images_src) ['res4']
-            target_features = self.backbone(images_target) ['res4']
+            src_features = self.backbone(images_src)
+            target_features = self.backbone(images_target)
 
             # 2. generate proposals
 
@@ -377,7 +377,7 @@ class GeneralizedRCNN(nn.Module):
             proposals_rpn, _ = self.proposal_generator(images_src, src_features, gt_instances)
 
             # 3. get features of corrosponding regions
-            src_features, target_features = self.roi_heads.forward_get_features(src_features, target_features, proposals_rpn, targets=gt_instances, res5=self.backbone.layer4, attnpool=self.backbone.attnpool)
+            src_features, target_features = self.roi_heads.forward_get_features(src_features['res4'], target_features['res4'], proposals_rpn, targets=gt_instances, res5=self.backbone.layer4, attnpool=self.backbone.attnpool)
             # 4. move all features to the same device ?
 
             src_features = torch.cat(GatherLayer.apply(src_features), dim=0)
