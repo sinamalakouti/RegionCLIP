@@ -382,7 +382,10 @@ class GeneralizedRCNN(nn.Module):
 
             # 3. get features of corrosponding regions
             src_features, target_features = self.roi_heads.forward_get_features(src_features, target_features, proposals, targets=gt_instances, res5=self.backbone.layer4, attnpool=self.backbone.attnpool)
-
+            print("Hereeeeeeeeeee ")
+            print(src_features.shape)
+            print(target_features.shape
+                  )
 
             # 4. project to the language domain
 
