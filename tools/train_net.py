@@ -1027,10 +1027,12 @@ def main(args):
     consider writing your own training loop (see plain_train_net.py) or
     subclassing the trainer.
     """
-    if cfg.SEMISUPNET.Trainer == "ateacher":
-        Trainer1 = ATeacherTrainer
-    else:
-        Trainer1 = Trainer
+    # if cfg.SEMISUPNET.Trainer == "ateacher":
+    #     Trainer1 = ATeacherTrainer
+    # else:
+    #     Trainer1 = Trainer
+    #
+    Trainer1 = Trainer
     trainer = Trainer1(cfg)
 
     # trainer = Trainer(cfg)
