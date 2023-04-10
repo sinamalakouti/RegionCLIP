@@ -191,7 +191,7 @@ class GeneralizedRCNN(nn.Module):
         images = ImageList.from_tensors(images, self.backbone.size_divisibility)
         images = preprocess2(images.tensor)
 
-        images_t = [(x["image_unlabeled"] / 255.0).to(self.device) for x in batched_inputs]
+        images_t = [(x["image_trgt"] / 255.0).to(self.device) for x in batched_inputs]
         images_t = ImageList.from_tensors(images_t, self.backbone.size_divisibility)
         images_t = preprocess2(images_t.tensor)
 
