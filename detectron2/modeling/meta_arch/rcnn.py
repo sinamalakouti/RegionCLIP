@@ -351,7 +351,6 @@ class GeneralizedRCNN(nn.Module):
         """
         torch.cuda.empty_cache()
 
-
         if not self.training:
             return self.inference(batched_inputs)
         if branch == 'caption_consistency':
@@ -378,14 +377,11 @@ class GeneralizedRCNN(nn.Module):
                 rand_inds = [torch.randperm(len(p))[:128].to(self.device) for p in proposals_rpn]
                 proposals = [p[rand_inds[i]] for i, p in enumerate(proposals_rpn)]
 
-                print("length of proposals   ", len(proposals[0]))
-
             # 3. get features of corrosponding regions
-            src_features, target_features = self.roi_heads.forward_get_features(src_features, target_features, proposals, targets=gt_instances, res5=self.backbone.layer4, attnpool=self.backbone.attnpool)
-            print("Hereeeeeeeeeee ")
-            print(src_features.shape)
-            print(target_features.shape
-                  )
+            src_features, target_features = self.roi_heads.forward_get_features(src_features, target_features,
+                                                                                proposals, targets=gt_instances,
+                                                                                res5=self.backbone.layer4,
+                                                                                attnpool=self.backbone.attnpool)
 
             # 4. project to the language domain
 
