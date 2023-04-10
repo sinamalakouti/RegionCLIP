@@ -368,13 +368,13 @@ class GeneralizedRCNN(nn.Module):
             target_features = self.backbone(images_target.tensor)
 
             # 2. generate proposals
-
-            if "instances" in batched_inputs[0]:
-                gt_instances = [x["instances"].to(self.device) for x in batched_inputs]
-            else:
-                gt_instances = None
-            # todo: should I set the with toch.grad to false?
-            proposals_rpn, _ = self.proposal_generator(images_src, src_features, gt_instances)
+            with torch.no_grad():
+                if "instances" in batched_inputs[0]:
+                    gt_instances = [x["instances"].to(self.device) for x in batched_inputs]
+                else:
+                    gt_instances = None
+                # todo: should I set the with toch.grad to false?
+                proposals_rpn, _ = self.proposal_generator(images_src, src_features, gt_instances)
 
             # 3. get features of corrosponding regions
             src_features, target_features = self.roi_heads.forward_get_features(src_features, target_features, proposals_rpn, targets=gt_instances, res5=self.backbone.layer4, attnpool=self.backbone.attnpool)
