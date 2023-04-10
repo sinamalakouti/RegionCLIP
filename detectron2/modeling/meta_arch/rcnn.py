@@ -374,9 +374,7 @@ class GeneralizedRCNN(nn.Module):
             else:
                 gt_instances = None
             # todo: should I set the with toch.grad to false?
-            proposals_rpn, _ = self.proposal_generator(
-                images_src, src_features, None, compute_loss=False
-            )
+            proposals_rpn, _ = self.proposal_generator(images_src, src_features, gt_instances)
 
             # 3. get features of corrosponding regions
             src_features, target_features = self.roi_heads.forward_get_features(src_features, target_features, proposals_rpn, targets=gt_instances, res5=self.backbone.layer4, attnpool=self.backbone.attnpool)
