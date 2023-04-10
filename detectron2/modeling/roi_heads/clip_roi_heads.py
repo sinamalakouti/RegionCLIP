@@ -117,7 +117,7 @@ class CLIPRes5ROIHeads(ROIHeads):
     def forward_get_features(self,  features_src, features_trgt, proposals, targets=None, res5=None, attnpool=None):
         if self.training:
             assert targets
-            proposals = self.label_and_sample_proposals(proposals, targets)
+            # proposals = self.label_and_sample_proposals(proposals, targets)
         del targets
         proposal_boxes = [x.proposal_boxes for x in proposals]
         box_features_src = self._shared_roi_transform(
