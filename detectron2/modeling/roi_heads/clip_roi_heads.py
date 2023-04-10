@@ -120,7 +120,6 @@ class CLIPRes5ROIHeads(ROIHeads):
             proposals = self.label_and_sample_proposals(proposals, targets)
         del targets
         proposal_boxes = [x.proposal_boxes for x in proposals]
-        print("length of proposals   ", len(proposal_boxes[0]))
         box_features_src = self._shared_roi_transform(
             [features_src[f] for f in self.in_features], proposal_boxes, res5
         )
