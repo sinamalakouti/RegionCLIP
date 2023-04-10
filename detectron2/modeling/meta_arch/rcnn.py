@@ -178,6 +178,25 @@ class GeneralizedRCNN(nn.Module):
 
         return images, images_t
 
+    def preprocess_image_caption_consistency_regionLevel(self, batched_inputs: List[Dict[str, torch.Tensor]]):
+        """
+        Normalize, pad and batch the input images.
+        """
+        # print( "in rcnn_mt")
+        # print(batched_inputs)
+        preprocess2 = nn.Sequential(
+            Normalize(mean=self.pixel_mean, std=self.pixel_std))
+
+        images = [(x["image"] / 255.0).to(self.device) for x in batched_inputs]
+        images = ImageList.from_tensors(images, self.backbone.size_divisibility)
+        images = preprocess2(images.tensor)
+
+        images_t = [(x["image_unlabeled"] / 255.0).to(self.device) for x in batched_inputs]
+        images_t = ImageList.from_tensors(images_t, self.backbone.size_divisibility)
+        images_t = preprocess2(images_t.tensor)
+
+        return images, images_t
+
     def first_feature_contrastive(self, images_src, images_target, clipcap_model):
         # offline backbone on src
         prefix_src = self.offline_backbone.attnpool(self.offline_backbone(images_src)['res5'])
@@ -292,8 +311,6 @@ class GeneralizedRCNN(nn.Module):
         del images_src
         del images_target
 
-
-
         student_features_trgt = torch.cat(GatherLayer.apply(student_features_trgt), dim=0)
         student_features_src = torch.cat(GatherLayer.apply(student_features_src), dim=0)
 
@@ -334,6 +351,8 @@ class GeneralizedRCNN(nn.Module):
                 "pred_boxes", "pred_classes", "scores", "pred_masks", "pred_keypoints"
         """
         torch.cuda.empty_cache()
+
+
         if not self.training:
             return self.inference(batched_inputs)
         if branch == 'caption_consistency':
@@ -341,6 +360,43 @@ class GeneralizedRCNN(nn.Module):
             cont_loss, kd_loss = self.v2l_contrastive(images_src, images_target, clipcap_model)
             # cont_loss, kd_loss = self.first_feature_contrastive(images_src, images_target, clipcap_model)
             return cont_loss, kd_loss
+        if branch == 'caption_consistency_regionLevel':
+            images_src, images_target = self.preprocess_image_caption_consistency_regionLevel(batched_inputs)
+
+            # 1. get backbone output
+            src_features = self.backbone(images_src) ['res4']
+            target_features = self.backbone(images_target) ['res4']
+
+            # 2. generate proposals
+
+            if "instances" in batched_inputs[0]:
+                gt_instances = [x["instances"].to(self.device) for x in batched_inputs]
+            else:
+                gt_instances = None
+            # todo: should I set the with toch.grad to false?
+            proposals_rpn, _ = self.proposal_generator(
+                images_src, src_features, None, compute_loss=False
+            )
+
+            # 3. get features of corrosponding regions
+            src_features, target_features = self.roi_heads.forward_get_features(src_features, target_features, proposals_rpn, targets=gt_instances, res5=self.backbone.layer4, attnpool=self.backbone.attnpool)
+            # 4. move all features to the same device ?
+
+            src_features = torch.cat(GatherLayer.apply(src_features), dim=0)
+            target_features = torch.cat(GatherLayer.apply(target_features), dim=0)
+
+            src_features = src_features / src_features.norm(dim=1, keepdim=True)
+            target_features = target_features / target_features.norm(dim=1, keepdim=True)
+
+            loss_fn = nn.CrossEntropyLoss()
+
+            joint_features = src_features @ target_features.t()
+            n = len(joint_features)
+            ground_truth = torch.arange(n, dtype=torch.long, device=self.device)
+
+            cont_loss = loss_fn(joint_features, ground_truth)
+
+            return cont_loss
 
         images = self.preprocess_image(batched_inputs)
         if "instances" in batched_inputs[0]:

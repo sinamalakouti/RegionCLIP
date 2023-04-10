@@ -114,12 +114,29 @@ class CLIPRes5ROIHeads(ROIHeads):
         x = self.pooler(features, boxes)
         return backbone_res5(x)
 
+    def forward_get_features(self,  features_src, features_trgt, proposals, targets=None, res5=None, attnpool=None):
+        if self.training:
+            assert targets
+            proposals = self.label_and_sample_proposals(proposals, targets)
+        del targets
+        proposal_boxes = [x.proposal_boxes for x in proposals]
+
+        box_features_src = self._shared_roi_transform(
+            [features_src[f] for f in self.in_features], proposal_boxes, res5
+        )
+        box_features_trgt = self._shared_roi_transform(
+            [features_trgt[f] for f in self.in_features], proposal_boxes, res5
+        )
+        if attnpool:  # att pooling
+            att_feats_src = attnpool(box_features_src)
+            att_feats_trgt = attnpool(box_features_trgt)
+        return att_feats_src, att_feats_trgt
+
     def forward(self, images, features, proposals, targets=None, res5=None, attnpool=None):
         """
         See :meth:`ROIHeads.forward`.
         """
         del images
-
         if self.training:
             assert targets
             proposals = self.label_and_sample_proposals(proposals, targets)
@@ -137,7 +154,9 @@ class CLIPRes5ROIHeads(ROIHeads):
             # print("attenpol"*100)
             # print(box_features.shape)
             # print(att_feats.shape)
-            predictions = self.box_predictor(att_feats)
+            predictions = self.box_predictor(
+
+            )
         else:  # mean pooling
             predictions = self.box_predictor(box_features.mean(dim=[2, 3]))
 
@@ -155,6 +174,7 @@ class CLIPRes5ROIHeads(ROIHeads):
                 mask_features = box_features[torch.cat(fg_selection_masks, dim=0)]
                 del box_features
                 losses.update(self.mask_head(mask_features, proposals))
+
             return [], losses
         else:
             pred_instances, _ = self.box_predictor.inference(predictions, proposals)

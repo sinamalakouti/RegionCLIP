@@ -171,9 +171,9 @@ class ATeacherTrainer(DefaultTrainer):
         # clipcap model
 
         self.clipcap_model = ClipCaptionModel(40, 40)
-        # p = torch.load('/Users/sinamalakouti/Desktop/RegionCLIP/test-regionclip/transformer_weights_r50.pt', 'cpu')
+        p = torch.load('/Users/sinamalakouti/Desktop/RegionCLIP/test-regionclip/transformer_weights_r50.pt', 'cpu')
         # p = torch.load('/projects/sina/RegionCLIP/pretrained_ckpt/transformer_r50_regionCLIP.pt', 'cpu')
-        p = torch.load('/projects/sina/RegionCLIP/pretrained_ckpt/transformers_pretrained_RegionCLIP.pt', 'cpu')
+        # p = torch.load('/projects/sina/RegionCLIP/pretrained_ckpt/transformers_pretrained_RegionCLIP.pt', 'cpu')
         self.clipcap_model.load_state_dict(p)
         # self.clipcap_model.lm_head = self.clipcap_model.gpt.lm_head
         # self.clipcap_model.gpt.lm_head = Identity()
@@ -905,7 +905,7 @@ class ATeacherTrainer(DefaultTrainer):
                             # self.cfg.SEMISUPNET.UNSUP_LOSS_WEIGHT
                         )
                     elif 'cont' in key or 'kd' in key:
-                        weight =  exp_rampup(self.iter, rampup_length=200000)
+                        weight =  exp_rampup(self.iter, rampup_length=20000)
                         loss_dict[key] = record_dict[key] * weight
                     elif key == 'loss_cont_pseudo':
                         loss_dict[key] = record_dict['loss_cont_pseudo'] *0.0
