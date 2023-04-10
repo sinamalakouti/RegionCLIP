@@ -358,6 +358,7 @@ class GeneralizedRCNN(nn.Module):
             images_src, images_target = self.preprocess_image_train(batched_inputs)
             cont_loss, kd_loss = self.v2l_contrastive(images_src, images_target, clipcap_model)
             # cont_loss, kd_loss = self.first_feature_contrastive(images_src, images_target, clipcap_model)
+            del images_src, images_target
             return cont_loss, kd_loss
         if branch == 'caption_consistency_regionLevel':
             images_src, images_target = self.preprocess_image_caption_consistency_regionLevel(batched_inputs)
