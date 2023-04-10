@@ -377,6 +377,7 @@ class GeneralizedRCNN(nn.Module):
                 proposals_rpn, _ = self.proposal_generator(images_src, src_features, gt_instances)
 
                 rand_inds = [torch.randperm(len(p))[:128].to(self.device) for p in proposals_rpn]
+                print("here here ran inds ", rand_inds)
                 proposals_rpn = [p[rand_inds[i]] for i, p in enumerate(proposals_rpn)]
 
             # 3. get features of corrosponding regions
