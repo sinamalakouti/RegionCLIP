@@ -402,6 +402,7 @@ class GeneralizedRCNN(nn.Module):
 
             joint_features = src_features @ target_features.t()
             n = len(joint_features)
+            print("n is   ", n)
             ground_truth = torch.arange(n, dtype=torch.long, device=self.device)
 
             cont_loss = loss_fn(joint_features, ground_truth)
