@@ -362,7 +362,6 @@ class GeneralizedRCNN(nn.Module):
             return cont_loss, kd_loss
         if branch == 'caption_consistency_regionLevel':
             images_src, images_target = self.preprocess_image_caption_consistency_regionLevel(batched_inputs)
-            print("image sizeeee isss :", images_src.tensor.shape)
             # 1. get backbone output
             src_features = self.backbone(images_src.tensor)
             target_features = self.backbone(images_target.tensor)
@@ -377,6 +376,7 @@ class GeneralizedRCNN(nn.Module):
                 proposals_rpn, _ = self.proposal_generator(images_src, src_features, gt_instances)
 
                 rand_inds = [torch.randperm(len(p))[:128].to(self.device) for p in proposals_rpn]
+                print(self.num_regions_per_img)
                 print("here here ran inds ", rand_inds)
                 proposals_rpn = [p[rand_inds[i]] for i, p in enumerate(proposals_rpn)]
 
