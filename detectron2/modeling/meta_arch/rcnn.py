@@ -190,10 +190,12 @@ class GeneralizedRCNN(nn.Module):
         images = [(x["image"] / 255.0).to(self.device) for x in batched_inputs]
         images = ImageList.from_tensors(images, self.backbone.size_divisibility)
         images = preprocess2(images.tensor)
+        images = ImageList.from_tensors(images, self.backbone.size_divisibility)
 
         images_t = [(x["image_trgt"] / 255.0).to(self.device) for x in batched_inputs]
         images_t = ImageList.from_tensors(images_t, self.backbone.size_divisibility)
         images_t = preprocess2(images_t.tensor)
+        images_t = ImageList.from_tensors(images_t, self.backbone.size_divisibility)
 
         return images, images_t
 
@@ -364,8 +366,8 @@ class GeneralizedRCNN(nn.Module):
             images_src, images_target = self.preprocess_image_caption_consistency_regionLevel(batched_inputs)
 
             # 1. get backbone output
-            src_features = self.backbone(images_src)
-            target_features = self.backbone(images_target)
+            src_features = self.backbone(images_src.tensor)
+            target_features = self.backbone(images_target.tensor)
 
             # 2. generate proposals
 
