@@ -362,7 +362,7 @@ class GeneralizedRCNN(nn.Module):
             return cont_loss, kd_loss
         if branch == 'caption_consistency_regionLevel':
             images_src, images_target = self.preprocess_image_caption_consistency_regionLevel(batched_inputs)
-
+            print("image sizeeee isss :", images_src.tensor.shape)
             # 1. get backbone output
             src_features = self.backbone(images_src.tensor)
             target_features = self.backbone(images_target.tensor)
