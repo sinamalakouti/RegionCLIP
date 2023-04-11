@@ -415,6 +415,42 @@ class GeneralizedRCNN(nn.Module):
 
             return cont_loss
 
+        if branch == 'supervised_target':
+            images_src, images_target = self.preprocess_image_train(batched_inputs)
+            del images_src
+            if "instances" in batched_inputs[0]:
+                gt_instances = [x["instances"].to(self.device) for x in batched_inputs]
+            else:
+                gt_instances = None
+            features = self.backbone(images_target.tensor)
+            if self.proposal_generator is not None:
+                proposals, proposal_losses = self.proposal_generator(images_target, features, gt_instances)
+            else:
+                assert "proposals" in batched_inputs[0]
+                proposals = [x["proposals"].to(self.device) for x in batched_inputs]
+                proposal_losses = {}
+
+            if self.use_clip_c4:  # use C4 + resnet weights from CLIP
+                if self.use_clip_attpool:  # use att_pool from CLIP to match dimension
+                    _, detector_losses = self.roi_heads(images_target, features, proposals, gt_instances,
+                                                        res5=self.backbone.layer4,
+                                                        attnpool=self.backbone.attnpool)
+                else:  # use default mean pool
+                    _, detector_losses = self.roi_heads(images_target, features, proposals, gt_instances,
+                                                        res5=self.backbone.layer4)
+            else:  # default setting
+                _, detector_losses = self.roi_heads(images_target, features, proposals, gt_instances)
+            if self.vis_period > 0:
+                storage = get_event_storage()
+                if storage.iter % self.vis_period == 0:
+                    self.visualize_training(batched_inputs, proposals)
+            losses = {}
+            losses.update(detector_losses)
+            losses.update(proposal_losses)
+            return losses
+
+
+
         images = self.preprocess_image(batched_inputs)
         if "instances" in batched_inputs[0]:
             gt_instances = [x["instances"].to(self.device) for x in batched_inputs]

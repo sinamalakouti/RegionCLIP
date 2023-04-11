@@ -152,7 +152,7 @@ class TrainerBase:
                 torch.load('/projects/sina/RegionCLIP/output/model_rgionclip_baseline-prompt_10k.pth', 'cpu')['model']
                 new_params = {}
                 for param in all_params:
-                    if 'backbone' in param:
+                    if 'backbone' in param and 'offline_backbone' not in param and 'teacher_backbone' not in param:
                         new_params[param[9:]] = all_params[param]
 
                 self.model.module.offline_backbone.load_state_dict(new_params, self.model.device)
@@ -326,6 +326,10 @@ class SimpleTrainer(TrainerBase):
             region_consistency_loss = self.model(data, clipcap_model=self.clipcap_model,
                                                  branch='caption_consistency_regionLevel')
             loss['cont_region_loss'] = region_consistency_loss
+
+            supervised_target_loss = self.model(data, branch='supervised_target')
+            for key in supervised_target_loss:
+                loss['target_' + key] = supervised_target_loss[key]
         else:
             caption_consistency_loss = self.model(data, clipcap_model=self.clipcap_model, branch='caption_consistency')
             loss['cont_loss'], loss['kd_loss'] = caption_consistency_loss[0] * 0.0, caption_consistency_loss[0] * 0.0
