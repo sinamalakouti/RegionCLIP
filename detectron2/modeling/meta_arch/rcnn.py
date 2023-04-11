@@ -416,7 +416,7 @@ class GeneralizedRCNN(nn.Module):
             return cont_loss
 
         if branch == 'supervised_target':
-            images_src, images_target = self.preprocess_image_train(batched_inputs)
+            images_src, images_target = self.preprocess_image_caption_consistency_regionLevel(batched_inputs)
             del images_src
             if "instances" in batched_inputs[0]:
                 gt_instances = [x["instances"].to(self.device) for x in batched_inputs]
