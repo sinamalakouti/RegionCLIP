@@ -96,7 +96,13 @@ class GeneralizedRCNN(nn.Module):
         # p = torch.load('/Users/sinamalakouti/Desktop/test-regionclip/transformer_weights.pt', 'cpu')
         # self.clipcap_model.load_state_dict(p)
 
-        self.projector = nn.Linear(30720, 256)
+        # self.projector = nn.Linear(30720, 256)
+
+        self.projector = nn.Sequential(
+            nn.Linear(30720, 30720),
+            nn.ReLU(),
+            nn.Linear(30720, 256)
+        )
 
     @classmethod
     def from_config(cls, cfg):
