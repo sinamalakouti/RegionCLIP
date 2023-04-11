@@ -153,7 +153,7 @@ class TrainerBase:
                 new_params = {}
                 for param in all_params:
                     if 'backbone' in param:
-                        new_params[param] = all_params[param]
+                        new_params[param[9:]] = all_params[param]
 
                 self.model.module.offline_backbone.load_state_dict(new_params, self.model.device)
 
