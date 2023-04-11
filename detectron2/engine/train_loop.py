@@ -327,9 +327,9 @@ class SimpleTrainer(TrainerBase):
                                                  branch='caption_consistency_regionLevel')
             loss['cont_region_loss'] = region_consistency_loss
 
-            supervised_target_loss = self.model(data, branch='supervised_target')
-            for key in supervised_target_loss:
-                loss['target_' + key] = supervised_target_loss[key]
+            # supervised_target_loss = self.model(data, branch='supervised_target')
+            # for key in supervised_target_loss:
+            #     loss['target_' + key] = supervised_target_loss[key]
         else:
             caption_consistency_loss = self.model(data, clipcap_model=self.clipcap_model, branch='caption_consistency')
             loss['cont_loss'], loss['kd_loss'] = caption_consistency_loss[0] * 0.0, caption_consistency_loss[0] * 0.0
