@@ -148,8 +148,16 @@ class TrainerBase:
             try:
                 self.before_train()
                 print("loading offlinee backbone params")
-                # self.model.module.offline_backbone.load_state_dict(torch.load('/projects/sina/RegionCLIP/output/model_rgionclip_baseline-prompt_10k.pth')['model'], self.model.device)
-                self.model.module.offline_backbone.load_state_dict(self.model.module.backbone.state_dict())
+                all_params = \
+                torch.load('/projects/sina/RegionCLIP/output/model_rgionclip_baseline-prompt_10k.pth', 'cpu')['model']
+                new_params = {}
+                for param in all_params:
+                    if 'backbone' in param:
+                        new_params[param] = all_params[param]
+
+                self.model.module.offline_backbone.load_state_dict(new_params, self.model.device)
+
+                # self.model.module.offline_backbone.load_state_dict(self.model.module.backbone.state_dict())
                 print("OK. .. Done")
                 for self.iter in range(start_iter, max_iter):
                     self.before_step()
@@ -270,7 +278,7 @@ class SimpleTrainer(TrainerBase):
         self.clipcap_model = ClipCaptionModel(40, 40)
         # p = torch.load('/Users/sinamalakouti/Desktop/RegionCLIP/test-regionclip/transformer_weights_r50.pt', 'cpu')
         # p = torch.load('/projects/sina/RegionCLIP/pretrained_ckpt/transformer_r50_regionCLIP.pt', 'cpu')
-        p = torch.load('/projects/sina/RegionCLIP/pretrained_ckpt/transformers_pretrained_RegionCLIP.pt' , 'cpu')
+        p = torch.load('/projects/sina/RegionCLIP/pretrained_ckpt/transformers_pretrained_RegionCLIP.pt', 'cpu')
         self.clipcap_model.load_state_dict(p)
         self.clipcap_model.eval()
         self.clipcap_model = self.clipcap_model.clip_project
@@ -309,13 +317,14 @@ class SimpleTrainer(TrainerBase):
 
         loss_dict = self.model(data)
         loss = {}
-        #for l in loss_dict:
-            #loss_dict[l] = loss_dict[l] * 0.0
-        if self.iter > 10100 :
+        # for l in loss_dict:
+        # loss_dict[l] = loss_dict[l] * 0.0
+        if self.iter > 10100:
 
             caption_consistency_loss = self.model(data, clipcap_model=self.clipcap_model, branch='caption_consistency')
             loss['cont_loss'], loss['kd_loss'] = caption_consistency_loss
-            region_consistency_loss = self.model(data, clipcap_model=self.clipcap_model, branch='caption_consistency_regionLevel')
+            region_consistency_loss = self.model(data, clipcap_model=self.clipcap_model,
+                                                 branch='caption_consistency_regionLevel')
             loss['cont_region_loss'] = region_consistency_loss
         else:
             caption_consistency_loss = self.model(data, clipcap_model=self.clipcap_model, branch='caption_consistency')
@@ -333,39 +342,36 @@ class SimpleTrainer(TrainerBase):
         """
         self.optimizer.zero_grad()
 
-
-        #a = list(self.clipcap_model.clip_project.parameters())[-1].clone()
+        # a = list(self.clipcap_model.clip_project.parameters())[-1].clone()
         losses.backward()
 
         import copy
 
-        #old = copy.deepcopy(list(self.model.module.backbone.parameters()))
+        # old = copy.deepcopy(list(self.model.module.backbone.parameters()))
 
-        #a = list(self.model.module.backbone.parameters())[0].clone()
+        # a = list(self.model.module.backbone.parameters())[0].clone()
         self.optimizer.step()
 
-        #new = list(self.model.module.backbone.parameters())
+        # new = list(self.model.module.backbone.parameters())
 
-        #b = list(self.clipcap_model.clip_project.parameters())[-1].clone()
+        # b = list(self.clipcap_model.clip_project.parameters())[-1].clone()
 
-      #  if self.model.device == torch.device('cuda:0'):
+        #  if self.model.device == torch.device('cuda:0'):
 
-          #   print(a)
-       #     print("-"*10)
-         #    print(b)
-          #   print("check")
+        #   print(a)
+        #     print("-"*10)
+        #    print(b)
+        #   print("check")
         #    print(a.data-b.data)
-          #  print("sum"*100)
-         #   print(sum(a.data-b.data))
+        #  print("sum"*100)
+        #   print(sum(a.data-b.data))
 
-            # print('*'*10)
-             #print(torch.equal(a.data, b.data))
-        #for i in range(len(new))#:
-         #   print(new[i].data == old[i].data)
-
+        # print('*'*10)
+        # print(torch.equal(a.data, b.data))
+        # for i in range(len(new))#:
+        #   print(new[i].data == old[i].data)
 
         report_loss = {}
-
 
         for k in loss_dict.keys():
             report_loss[k] = loss_dict[k].detach()
@@ -376,7 +382,7 @@ class SimpleTrainer(TrainerBase):
         wrap the optimizer with your custom `step()` method. But it is
         suboptimal as explained in https://arxiv.org/abs/2006.15704 Sec 3.2.4
         """
-        #self.optimizer.step()
+        # self.optimizer.step()
 
     def _write_metrics(
             self,
@@ -593,7 +599,6 @@ class SimpleTrainer(TrainerBase):
 #         self.optimizer.load_state_dict(state_dict["optimizer"])
 
 
-
 class AMPTrainer(SimpleTrainer):
     """
     Like :class:`SimpleTrainer`, but uses PyTorch's native automatic mixed precision
@@ -655,6 +660,3 @@ class AMPTrainer(SimpleTrainer):
     def load_state_dict(self, state_dict):
         super().load_state_dict(state_dict)
         self.grad_scaler.load_state_dict(state_dict["grad_scaler"])
-
-
-
