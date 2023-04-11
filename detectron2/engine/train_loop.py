@@ -149,7 +149,7 @@ class TrainerBase:
                 self.before_train()
                 print("loading offlinee backbone params")
                 all_params = \
-                torch.load('/projects/sina/RegionCLIP/output/model_rgionclip_baseline-prompt_10k.pth', 'cpu')['model']
+                torch.load('/projects/sina/RegionCLIP/pretrained_ckpt/regionclip/regionclip_pretrained-cc_rn50.pth', 'cpu')['model']
                 new_params = {}
                 for param in all_params:
                     if 'backbone' in param and 'offline_backbone' not in param and 'teacher_backbone' not in param:
