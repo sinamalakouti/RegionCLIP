@@ -98,11 +98,11 @@ class GeneralizedRCNN(nn.Module):
 
         # self.projector = nn.Linear(30720, 256)
 
-        self.projector = nn.Sequential(
-            nn.Linear(768, 768),
-            nn.ReLU(),
-            nn.Linear(768, 256)
-        )
+        # self.projector = nn.Sequential(
+        #     nn.Linear(768, 768),
+        #     nn.ReLU(),
+        #     nn.Linear(768, 256)
+        # )
 
     @classmethod
     def from_config(cls, cfg):
