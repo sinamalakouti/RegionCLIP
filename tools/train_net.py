@@ -169,9 +169,9 @@ class ATeacherTrainer(DefaultTrainer):
         # clipcap model
 
         self.clipcap_model = ClipCaptionModel(40, 40)
-        p = torch.load('/Users/sinamalakouti/Desktop/RegionCLIP/test-regionclip/transformer_weights_r50.pt', 'cpu')
+        # p = torch.load('/Users/sinamalakouti/Desktop/RegionCLIP/test-regionclip/transformer_weights_r50.pt', 'cpu')
         # p = torch.load('/projects/sina/RegionCLIP/pretrained_ckpt/transformer_r50_regionCLIP.pt', 'cpu')
-        # p = torch.load('/projects/sina/RegionCLIP/pretrained_ckpt/transformers_pretrained_RegionCLIP.pt', 'cpu')
+        p = torch.load('/projects/sina/RegionCLIP/pretrained_ckpt/transformers_pretrained_RegionCLIP.pt', 'cpu')
         self.clipcap_model.load_state_dict(p)
         # self.clipcap_model.lm_head = self.clipcap_model.gpt.lm_head
         # self.clipcap_model.gpt.lm_head = Identity()
@@ -325,7 +325,17 @@ class ATeacherTrainer(DefaultTrainer):
             try:
                 self.before_train()
                 print("loading offlinee backbone params")
-                self.offline_backbone.load_state_dict(self.model.module.backbone.state_dict())
+                all_params = \
+                    torch.load('/projects/sina/RegionCLIP/pretrained_ckpt/regionclip/regionclip_pretrained-cc_rn50.pth',
+                               'cpu')['model']
+                new_params = {}
+                for param in all_params:
+                    if 'backbone' in param and 'offline_backbone' not in param and 'teacher_backbone' not in param:
+                        new_params[param[9:]] = all_params[param]
+
+                self.model.module.offline_backbone.load_state_dict(new_params, self.model.device)
+                
+                # self.offline_backbone.load_state_dict(self.model.module.backbone.state_dict())
                 for p in self.offline_backbone.parameters(): p.requires_grad = False
                 self.offline_backbone.eval()
                 print("OK. .. Done")
