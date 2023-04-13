@@ -185,18 +185,14 @@ class DAobjTwoStagePseudoLabGeneralizedRCNN(nn.Module):
         """
         Normalize, pad and batch the input images.
         """
-        # print( "in rcnn_mt")
-        # print(batched_inputs)
-        preprocess2 = nn.Sequential(
-            Normalize(mean=self.pixel_mean, std=self.pixel_std))
+        
 
-        images = [(x["image"] / 255.0).to(self.device) for x in batched_inputs]
+        # images = [(x["image"] / 255.0).to(self.device) for x in batched_inputs]
+        images = [((x["image"] / 255.0) - self.pixel_mean) / self.pixel_std for x in batched_inputs]
         images = ImageList.from_tensors(images, self.backbone.size_divisibility)
-        images = preprocess2(images.tensor)
 
-        images_t = [(x["image_unlabeled"] / 255.0).to(self.device) for x in batched_inputs]
+        images_t = [((x["image_trgt"] / 255.0) - self.pixel_mean) / self.pixel_std for x in batched_inputs]
         images_t = ImageList.from_tensors(images_t, self.backbone.size_divisibility)
-        images_t = preprocess2(images_t.tensor)
 
         return images, images_t
 
