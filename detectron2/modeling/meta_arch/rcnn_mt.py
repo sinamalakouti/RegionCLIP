@@ -199,6 +199,7 @@ class DAobjTwoStagePseudoLabGeneralizedRCNN(nn.Module):
         images_t = preprocess2(images_t.tensor)
 
         return images, images_t
+
     def first_feature_contrastive(self, images_src, images_target, clipcap_model):
         # offline backbone on src
         prefix_src = offline_backbone.attnpool(offline_backbone(images_src)['res5'])
@@ -341,16 +342,10 @@ class DAobjTwoStagePseudoLabGeneralizedRCNN(nn.Module):
             images, features, None, compute_loss=False
         )
 
-
         # 2. pool the features on both src and target
 
         # 3. Contrastive Loss
         return cont_loss, kd_loss
-
-
-
-
-
 
     def forward(self, batched_inputs: List[Dict[str, torch.Tensor]], clipcap_model=None, branch='supervised',
                 offline_backbone=None):
@@ -435,8 +430,7 @@ class DAobjTwoStagePseudoLabGeneralizedRCNN(nn.Module):
 
             cont_loss = loss_fn(joint_features, ground_truth)
 
-            return {'loss_cont_region': cont_loss},  [], [], None
-
+            return {'loss_cont_region': cont_loss}, [], [], None
 
         images = self.preprocess_image(batched_inputs)
 
@@ -458,8 +452,8 @@ class DAobjTwoStagePseudoLabGeneralizedRCNN(nn.Module):
 
             if self.use_clip_c4:  # use C4 + resnet weights from CLIP
                 if self.use_clip_attpool:  # use att_pool from CLIP to match dimension
-                    _, detector_losses, _ = self.roi_heads(images, features, proposals, gt_instances,
-                                                           res5=self.backbone.layer4, attnpool=self.backbone.attnpool)
+                    _, detector_losses = self.roi_heads(images, features, proposals, gt_instances,
+                                                        res5=self.backbone.layer4, attnpool=self.backbone.attnpool)
                 else:  # use default mean pool
                     _, detector_losses = self.roi_heads(images, features, proposals, gt_instances,
                                                         res5=self.backbone.layer4)
@@ -760,8 +754,6 @@ class DAobjTwoStagePseudoLabGeneralizedRCNN(nn.Module):
         images_t = ImageList.from_tensors(images_t, self.backbone.size_divisibility)
 
         return images, images_t
-
-
 
     def preprocess_image(self, batched_inputs: List[Dict[str, torch.Tensor]]):
         """
