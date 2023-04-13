@@ -329,22 +329,7 @@ class DAobjTwoStagePseudoLabGeneralizedRCNN(nn.Module):
         ground_truth = torch.arange(n, dtype=torch.long, device=self.device)
 
         cont_loss = loss_fn(joint_features, ground_truth)
-        ######### REGION LEVEL CONTRASTIVE LOSS #########
 
-        # 1. Get student's region proposals on source
-
-        if "instances" in batched_inputs[0]:
-            gt_instances = [x["instances"].to(self.device) for x in batched_inputs]
-        else:
-            gt_instances = None
-
-        proposals_rpn, _ = self.proposal_generator(
-            images, features, None, compute_loss=False
-        )
-
-        # 2. pool the features on both src and target
-
-        # 3. Contrastive Loss
         return cont_loss, kd_loss
 
     def forward(self, batched_inputs: List[Dict[str, torch.Tensor]], clipcap_model=None, branch='supervised',
