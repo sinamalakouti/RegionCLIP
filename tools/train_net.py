@@ -166,8 +166,6 @@ class ATeacherTrainer(DefaultTrainer):
         model_teacher = self.build_model(cfg)
         self.model_teacher = model_teacher
 
-
-
         # clipcap model
 
         self.clipcap_model = ClipCaptionModel(40, 40)
@@ -334,8 +332,8 @@ class ATeacherTrainer(DefaultTrainer):
                 self.total_lossess = 0
                 for self.iter in range(start_iter, max_iter):
                     self.before_step()
-                    # self.run_step_full_semisup()
-                    self.run_step_full_semisup_gradient_accumulation()
+                    self.run_step_full_semisup()
+                    # self.run_step_full_semisup_gradient_accumulation()
                     self.after_step()
             except Exception:
                 logger.exception("Exception during training:")
@@ -493,7 +491,8 @@ class ATeacherTrainer(DefaultTrainer):
         self.model_teacher = self.model_teacher.to(self.model.device)
         images_src, images_target = self.model.module.preprocess_image_caption_consistency(batched_inputs)
 
-        prefix_src = self.offline_backbone.to(self.model.device).attnpool(self.offline_backbone.to(self.model.device)(images_src)['res5'])
+        prefix_src = self.offline_backbone.to(self.model.device).attnpool(
+            self.offline_backbone.to(self.model.device)(images_src)['res5'])
         teacher_features = v2l(prefix_src, self.clipcap_model.to(self.model.device)).detach()
 
         # student backbone on target
@@ -675,14 +674,17 @@ class ATeacherTrainer(DefaultTrainer):
 
             all_domain_data = label_data_k
             #
-            # record_all_domain_data, _, _, _ = self.model(all_domain_data, branch="caption_consistency",
-            #                                              clipcap_model=self.clipcap_model.to(self.model.device),
-            #                                              offline_backbone=self.offline_backbone.to(self.model.device))
+            record_all_domain_data, _, _, _ = self.model(all_domain_data, branch="caption_consistency",
+                                                         clipcap_model=self.clipcap_model.to(self.model.device),
+                                                         offline_backbone=self.offline_backbone.to(self.model.device))
 
-            record_all_domain_data, _, _, _= self.v2l_contrastive_loss(all_domain_data)
+            # record_all_domain_data, _, _, _= self.v2l_contrastive_loss(all_domain_data)
 
             record_dict.update(record_all_domain_data)
 
+            region_consistency_loss, _, _, _ = self.model(data, clipcap_model=self.clipcap_model.to(self.model.device),
+                                                          branch='caption_consistency_regionLevel')
+            record_dict.update(record_all_domain_data)
             # weight losses
             loss_dict = {}
             for key in record_dict.keys():
@@ -707,8 +709,6 @@ class ATeacherTrainer(DefaultTrainer):
         self.optimizer.zero_grad()
         losses.backward()
         self.optimizer.step()
-
-
 
     def run_step_full_semisup_gradient_accumulation(self):
         torch.cuda.empty_cache()
@@ -764,15 +764,13 @@ class ATeacherTrainer(DefaultTrainer):
 
             elif (
                     self.iter - self.cfg.SEMISUPNET.BURN_UP_STEP
-            ) % self.cfg.SEMISUPNET.TEACHER_UPDATE_ITER == 0  and self.iter % self.accum_iter == 0:
+            ) % self.cfg.SEMISUPNET.TEACHER_UPDATE_ITER == 0 and self.iter % self.accum_iter == 0:
                 self._update_teacher_model(
                     keep_rate=self.cfg.SEMISUPNET.EMA_KEEP_RATE)
 
             record_dict = {}
 
-
-
-            if self.iter % self.accum_iter  == 1:
+            if self.iter % self.accum_iter == 1:
                 ######################## For probe #################################
                 # import pdb; pdb. set_trace()
                 gt_unlabel_k = self.get_label(unlabel_data_k)
@@ -837,7 +835,7 @@ class ATeacherTrainer(DefaultTrainer):
             if self.iter % self.accum_iter == 0:
                 # all_label_data = label_data_q + label_data_k
                 record_all_label_data, _, _, _ = self.model(
-                 label_data_k, branch="supervised"
+                    label_data_k, branch="supervised"
                 )
                 record_dict.update(record_all_label_data)
                 # del label_data_q
@@ -866,7 +864,8 @@ class ATeacherTrainer(DefaultTrainer):
                 #
                 record_all_domain_data, _, _, _ = self.model(all_domain_data, branch="caption_consistency",
                                                              clipcap_model=self.clipcap_model.to(self.model.device),
-                                                             offline_backbone=self.offline_backbone.to(self.model.device))
+                                                             offline_backbone=self.offline_backbone.to(
+                                                                 self.model.device))
 
                 # record_all_domain_data, _, _, _= self.v2l_contrastive_loss(all_domain_data)
 
@@ -884,7 +883,8 @@ class ATeacherTrainer(DefaultTrainer):
                 #
                 record_all_domain_data, _, _, _ = self.model(all_domain_data, branch="caption_consistency",
                                                              clipcap_model=self.clipcap_model.to(self.model.device),
-                                                             offline_backbone=self.offline_backbone.to(self.model.device))
+                                                             offline_backbone=self.offline_backbone.to(
+                                                                 self.model.device))
 
                 # record_all_domain_data, _, _, _ = self.v2l_contrastive_loss(all_domain_data)
                 for key in record_all_domain_data:
@@ -905,13 +905,12 @@ class ATeacherTrainer(DefaultTrainer):
                             # self.cfg.SEMISUPNET.UNSUP_LOSS_WEIGHT
                         )
                     elif 'cont' in key or 'kd' in key:
-                        weight =  exp_rampup(self.iter, rampup_length=20000)
+                        weight = exp_rampup(self.iter, rampup_length=2000)
                         loss_dict[key] = record_dict[key] * weight
                     elif key == 'loss_cont_pseudo':
-                        loss_dict[key] = record_dict['loss_cont_pseudo'] *0.0
+                        loss_dict[key] = record_dict['loss_cont_pseudo'] * 0.0
                     else:  # supervised loss
                         loss_dict[key] = record_dict[key] * 1
-
 
             losses = sum(loss_dict.values())
 
@@ -927,8 +926,9 @@ class ATeacherTrainer(DefaultTrainer):
         # losses.backward()
         # if ((self.iter + 1) % self.accum_iter == 0) or (self.iter + 1 == self.max_iter):
         #     self.optimizer.zero_grad()
-            # self.total_lossess.backward()
-            # self.optimizer.step()
+        # self.total_lossess.backward()
+        # self.optimizer.step()
+
     @classmethod
     def build_test_loader(cls, cfg, dataset_name):
         return build_detection_test_loader(cfg, dataset_name)
@@ -993,7 +993,7 @@ def setup(args):
     Create configs and perform basic setups.
     """
     cfg = get_cfg()
-#    add_ateacher_config(cfg)  # uncomment if training Mean Teacher
+    add_ateacher_config(cfg)  # uncomment if you want use mean_teacher
     cfg.merge_from_file(args.config_file)
     cfg.merge_from_list(args.opts)
     cfg.freeze()
@@ -1027,12 +1027,10 @@ def main(args):
     consider writing your own training loop (see plain_train_net.py) or
     subclassing the trainer.
     """
-    # if cfg.SEMISUPNET.Trainer == "ateacher":
-    #     Trainer1 = ATeacherTrainer
-    # else:
-    #     Trainer1 = Trainer
-    #
-    Trainer1 = Trainer
+    if cfg.SEMISUPNET.Trainer == "ateacher":
+        Trainer1 = ATeacherTrainer
+    else:
+        Trainer1 = Trainer
     trainer = Trainer1(cfg)
 
     # trainer = Trainer(cfg)

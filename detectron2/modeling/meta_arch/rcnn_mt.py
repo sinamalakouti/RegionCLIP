@@ -92,13 +92,13 @@ class DAobjTwoStagePseudoLabGeneralizedRCNN(nn.Module):
         self.use_clip_c4 = use_clip_c4  # if True, use C4 mode where roi_head uses the last resnet layer from backbone
         self.use_clip_attpool = use_clip_attpool  # if True (C4+text_emb_as_classifier), use att_pool to replace default mean pool
 
-        self.projector = nn.Linear(30720, 256)
+        # self.projector = nn.Linear(30720, 256)
 
-        # self.projector = nn.Sequential(
-        #     nn.Linear(30720, 30720, bias=False),
-        #     nn.ReLU(),
-        #     nn.Linear(30720, 128, bias=False),
-        # )
+        self.projector = nn.Sequential(
+            nn.Linear(768, 768),
+            nn.ReLU(),
+            nn.Linear(768, 256)
+        )
 
     @classmethod
     def from_config(cls, cfg):
@@ -118,7 +118,7 @@ class DAobjTwoStagePseudoLabGeneralizedRCNN(nn.Module):
             "pixel_mean": cfg.MODEL.PIXEL_MEAN,
             "pixel_std": cfg.MODEL.PIXEL_STD,
             "use_clip_c4": cfg.MODEL.BACKBONE.NAME == "build_clip_resnet_backbone",
-            "use_clip_attpool":   'CLIPRes5ROIHeads' in cfg.MODEL.ROI_HEADS.NAME and cfg.MODEL.CLIP.USE_TEXT_EMB_CLASSIFIER,
+            "use_clip_attpool": 'CLIPRes5ROIHeads' in cfg.MODEL.ROI_HEADS.NAME and cfg.MODEL.CLIP.USE_TEXT_EMB_CLASSIFIER,
         }
 
     @property
@@ -181,6 +181,24 @@ class DAobjTwoStagePseudoLabGeneralizedRCNN(nn.Module):
 
         return images, images_t
 
+    def preprocess_image_caption_consistency_regionLevel(self, batched_inputs: List[Dict[str, torch.Tensor]]):
+        """
+        Normalize, pad and batch the input images.
+        """
+        # print( "in rcnn_mt")
+        # print(batched_inputs)
+        preprocess2 = nn.Sequential(
+            Normalize(mean=self.pixel_mean, std=self.pixel_std))
+
+        images = [(x["image"] / 255.0).to(self.device) for x in batched_inputs]
+        images = ImageList.from_tensors(images, self.backbone.size_divisibility)
+        images = preprocess2(images.tensor)
+
+        images_t = [(x["image_unlabeled"] / 255.0).to(self.device) for x in batched_inputs]
+        images_t = ImageList.from_tensors(images_t, self.backbone.size_divisibility)
+        images_t = preprocess2(images_t.tensor)
+
+        return images, images_t
     def first_feature_contrastive(self, images_src, images_target, clipcap_model):
         # offline backbone on src
         prefix_src = offline_backbone.attnpool(offline_backbone(images_src)['res5'])
@@ -250,7 +268,9 @@ class DAobjTwoStagePseudoLabGeneralizedRCNN(nn.Module):
 
         return cont_loss, kd_loss
 
-    def v2l_contrastive(self, images_src, images_target, clipcap_model, offline_backbone):
+    def v2l_contrastive(self, batched_inputs, clipcap_model, offline_backbone):
+
+        images_src, images_target = self.preprocess_image_caption_consistency(batched_inputs)
         # offline backbone on src
         prefix_src = offline_backbone.attnpool(offline_backbone(images_src)['res5'])
         teacher_features = v2l(prefix_src, clipcap_model.to(self.device)).detach()
@@ -308,11 +328,32 @@ class DAobjTwoStagePseudoLabGeneralizedRCNN(nn.Module):
         ground_truth = torch.arange(n, dtype=torch.long, device=self.device)
 
         cont_loss = loss_fn(joint_features, ground_truth)
+        ######### REGION LEVEL CONTRASTIVE LOSS #########
 
+        # 1. Get student's region proposals on source
+
+        if "instances" in batched_inputs[0]:
+            gt_instances = [x["instances"].to(self.device) for x in batched_inputs]
+        else:
+            gt_instances = None
+
+        proposals_rpn, _ = self.proposal_generator(
+            images, features, None, compute_loss=False
+        )
+
+
+        # 2. pool the features on both src and target
+
+        # 3. Contrastive Loss
         return cont_loss, kd_loss
 
 
-    def forward(self, batched_inputs: List[Dict[str, torch.Tensor]], clipcap_model=None, branch='supervised', offline_backbone=None):
+
+
+
+
+    def forward(self, batched_inputs: List[Dict[str, torch.Tensor]], clipcap_model=None, branch='supervised',
+                offline_backbone=None):
         """
         Args:
             batched_inputs: a list, batched outputs of :class:`DatasetMapper` .
@@ -339,13 +380,63 @@ class DAobjTwoStagePseudoLabGeneralizedRCNN(nn.Module):
         if not self.training:
             return self.inference(batched_inputs)
         if branch == 'caption_consistency':
-            images_src, images_target = self.preprocess_image_caption_consistency(batched_inputs)
-            cont_loss, kd_loss = self.v2l_contrastive(images_src, images_target, clipcap_model, offline_backbone)
+            cont_loss, kd_loss = self.v2l_contrastive(batched_inputs, clipcap_model, offline_backbone)
             # cont_loss, kd_loss = self.first_feature_contrastive(images_src, images_target, clipcap_model)
             losses = {}
             losses['loss_cont'] = cont_loss
             losses['loss_kd'] = kd_loss
             return losses, [], [], None
+
+        if branch == 'caption_consistency_regionLevel':
+            images_src, images_target = self.preprocess_image_caption_consistency_regionLevel(batched_inputs)
+            # 1. get backbone output
+            src_features = self.backbone(images_src.tensor)
+            target_features = self.backbone(images_target.tensor)
+
+            # 2. generate proposals
+            with torch.no_grad():
+                if "instances" in batched_inputs[0]:
+                    gt_instances = [x["instances"].to(self.device) for x in batched_inputs]
+                else:
+                    gt_instances = None
+                # todo: should I set the with toch.grad to false?
+                proposals_rpn, _ = self.proposal_generator(images_src, src_features, gt_instances)
+
+                rand_inds = [torch.randperm(len(p))[:16].to(self.device) for p in proposals_rpn]
+                proposals = [p[rand_inds[i]] for i, p in enumerate(proposals_rpn)]
+
+            # 3. get features of corrosponding regions
+            src_features, target_features = self.roi_heads.forward_get_features(src_features, target_features,
+                                                                                proposals, targets=gt_instances,
+                                                                                res5=self.backbone.layer4,
+                                                                                attnpool=self.backbone.attnpool)
+
+            # 4. project to the language domain
+
+            src_features = v2l(src_features, clipcap_model.to(self.device))
+            src_features = self.projector(src_features)
+
+            target_features = v2l(target_features, clipcap_model.to(self.device))
+            target_features = self.projector(target_features)
+            # 4. move all features to the same device ?
+
+            src_features = torch.cat(GatherLayer.apply(src_features), dim=0)
+            target_features = torch.cat(GatherLayer.apply(target_features), dim=0)
+
+            src_features = src_features / src_features.norm(dim=1, keepdim=True)
+            target_features = target_features / target_features.norm(dim=1, keepdim=True)
+
+            loss_fn = nn.CrossEntropyLoss()
+
+            joint_features = src_features @ target_features.t()
+            n = len(joint_features)
+
+            ground_truth = torch.arange(n, dtype=torch.long, device=self.device)
+
+            cont_loss = loss_fn(joint_features, ground_truth)
+
+            return {'loss_cont_region': cont_loss},  [], [], None
+
 
         images = self.preprocess_image(batched_inputs)
 
@@ -367,8 +458,8 @@ class DAobjTwoStagePseudoLabGeneralizedRCNN(nn.Module):
 
             if self.use_clip_c4:  # use C4 + resnet weights from CLIP
                 if self.use_clip_attpool:  # use att_pool from CLIP to match dimension
-                    _, detector_losses = self.roi_heads(images, features, proposals, gt_instances,
-                                                        res5=self.backbone.layer4, attnpool=self.backbone.attnpool)
+                    _, detector_losses, _ = self.roi_heads(images, features, proposals, gt_instances,
+                                                           res5=self.backbone.layer4, attnpool=self.backbone.attnpool)
                 else:  # use default mean pool
                     _, detector_losses = self.roi_heads(images, features, proposals, gt_instances,
                                                         res5=self.backbone.layer4)
@@ -387,7 +478,6 @@ class DAobjTwoStagePseudoLabGeneralizedRCNN(nn.Module):
             # cont_loss, kd_loss = self.v2l_contrastive(images, images, clipcap_model)
             # losses['loss_cont'] = cont_loss * 0.0
             # losses['loss_kd'] = kd_loss * 0.0
-
             return losses, [], [], None
         elif branch == 'supervised_target':
             if self.proposal_generator is not None:
@@ -632,6 +722,47 @@ class DAobjTwoStagePseudoLabGeneralizedRCNN(nn.Module):
         else:
             return results
 
+    def preprocess_image_caption_consistency(self, batched_inputs: List[Dict[str, torch.Tensor]]):
+        """
+        Normalize, pad and batch the input images.
+        """
+        # print( "in rcnn_mt")
+        # print(batched_inputs)
+        preprocess2 = nn.Sequential(
+            Resize(size=224, interpolation=InterpolationMode.BICUBIC, max_size=None, antialias=None),
+            CenterCrop(size=(224, 224)),
+            Normalize(mean=self.pixel_mean, std=self.pixel_std))
+
+        images = [(x["image"] / 255.0).to(self.device) for x in batched_inputs]
+        images = ImageList.from_tensors(images, self.backbone.size_divisibility)
+        images = preprocess2(images.tensor)
+
+        images_t = [(x["image_unlabeled"] / 255.0).to(self.device) for x in batched_inputs]
+        images_t = ImageList.from_tensors(images_t, self.backbone.size_divisibility)
+        images_t = preprocess2(images_t.tensor)
+
+        return images, images_t
+
+    def preprocess_image_caption_consistency_regionLevel(self, batched_inputs: List[Dict[str, torch.Tensor]]):
+        """
+        Normalize, pad and batch the input images.
+        """
+        # print( "in rcnn_mt")
+        # print(batched_inputs)
+        preprocess2 = nn.Sequential(
+            Normalize(mean=self.pixel_mean, std=self.pixel_std))
+
+        # images = [(x["image"] / 255.0).to(self.device) for x in batched_inputs]
+        images = [((x["image"] / 255.0) - self.pixel_mean) / self.pixel_std for x in batched_inputs]
+        images = ImageList.from_tensors(images, self.backbone.size_divisibility)
+
+        images_t = [((x["image_trgt"] / 255.0) - self.pixel_mean) / self.pixel_std for x in batched_inputs]
+        images_t = ImageList.from_tensors(images_t, self.backbone.size_divisibility)
+
+        return images, images_t
+
+
+
     def preprocess_image(self, batched_inputs: List[Dict[str, torch.Tensor]]):
         """
         Normalize, pad and batch the input images.
@@ -659,5 +790,3 @@ class DAobjTwoStagePseudoLabGeneralizedRCNN(nn.Module):
             r = detector_postprocess(results_per_image, height, width)
             processed_results.append({"instances": r})
         return processed_results
-
-
