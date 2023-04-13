@@ -671,6 +671,23 @@ class CLIPRes5ROIHeadsPseudoLab(ROIHeads):
         x = self.pooler(features, boxes)
         return backbone_res5(x)
 
+    def forward_get_features(self,  features_src, features_trgt, proposals, targets=None, res5=None, attnpool=None):
+        if self.training:
+            assert targets
+            # proposals = self.label_and_sample_proposals(proposals, targets)
+        del targets
+        proposal_boxes = [x.proposal_boxes for x in proposals]
+        box_features_src = self._shared_roi_transform(
+            [features_src[f] for f in self.in_features], proposal_boxes, res5
+        )
+        box_features_trgt = self._shared_roi_transform(
+            [features_trgt[f] for f in self.in_features], proposal_boxes, res5
+        )
+        if attnpool:  # att pooling
+            att_feats_src = attnpool(box_features_src)
+            att_feats_trgt = attnpool(box_features_trgt)
+        return att_feats_src, att_feats_trgt
+
     def forward(
             self,
             images,
