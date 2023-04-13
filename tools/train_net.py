@@ -175,7 +175,7 @@ class ATeacherTrainer(DefaultTrainer):
         self.clipcap_model.load_state_dict(p)
         # self.clipcap_model.lm_head = self.clipcap_model.gpt.lm_head
         # self.clipcap_model.gpt.lm_head = Identity()
-        self.clipcap_model.gpt = None
+        self.clipcap_model = self.clipcap_model.clip_project
         for p in self.clipcap_model.parameters():
             p.requires_grad = False
 
