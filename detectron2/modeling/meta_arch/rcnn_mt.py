@@ -191,7 +191,7 @@ class DAobjTwoStagePseudoLabGeneralizedRCNN(nn.Module):
         images = [((x["image"] / 255.0) - self.pixel_mean) / self.pixel_std for x in batched_inputs]
         images = ImageList.from_tensors(images, self.backbone.size_divisibility)
 
-        images_t = [((x["image_trgt"] / 255.0) - self.pixel_mean) / self.pixel_std for x in batched_inputs]
+        images_t = [((x["image_unlabeled"] / 255.0) - self.pixel_mean) / self.pixel_std for x in batched_inputs]
         images_t = ImageList.from_tensors(images_t, self.backbone.size_divisibility)
 
         return images, images_t
@@ -718,23 +718,6 @@ class DAobjTwoStagePseudoLabGeneralizedRCNN(nn.Module):
 
         return images, images_t
 
-    def preprocess_image_caption_consistency_regionLevel(self, batched_inputs: List[Dict[str, torch.Tensor]]):
-        """
-        Normalize, pad and batch the input images.
-        """
-        # print( "in rcnn_mt")
-        # print(batched_inputs)
-        preprocess2 = nn.Sequential(
-            Normalize(mean=self.pixel_mean, std=self.pixel_std))
-
-        # images = [(x["image"] / 255.0).to(self.device) for x in batched_inputs]
-        images = [((x["image"] / 255.0) - self.pixel_mean) / self.pixel_std for x in batched_inputs]
-        images = ImageList.from_tensors(images, self.backbone.size_divisibility)
-
-        images_t = [((x["image_trgt"] / 255.0) - self.pixel_mean) / self.pixel_std for x in batched_inputs]
-        images_t = ImageList.from_tensors(images_t, self.backbone.size_divisibility)
-
-        return images, images_t
 
     def preprocess_image(self, batched_inputs: List[Dict[str, torch.Tensor]]):
         """
