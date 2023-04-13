@@ -694,7 +694,7 @@ class ATeacherTrainer(DefaultTrainer):
 
             region_consistency_loss, _, _, _ = self.model(all_domain_data, clipcap_model=self.clipcap_model.to(self.model.device),
                                                           branch='caption_consistency_regionLevel')
-            record_dict.update(region_consistency_loss)
+            record_dict.update(region_consistency_lossdfafsda)
             # weight losses
             loss_dict = {}
             for key in record_dict.keys():
