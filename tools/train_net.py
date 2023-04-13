@@ -333,8 +333,8 @@ class ATeacherTrainer(DefaultTrainer):
                     if 'backbone' in param and 'offline_backbone' not in param and 'teacher_backbone' not in param:
                         new_params[param[9:]] = all_params[param]
 
-                self.model.module.offline_backbone.load_state_dict(new_params, self.model.device)
-                
+                self.offline_backbone.load_state_dict(new_params, self.model.device)
+
                 # self.offline_backbone.load_state_dict(self.model.module.backbone.state_dict())
                 for p in self.offline_backbone.parameters(): p.requires_grad = False
                 self.offline_backbone.eval()
